@@ -1,0 +1,47 @@
+@import './theme.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans text-ink bg-bg;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  /* ── Card ─────────────────────────────────────────────────────────── */
+  .card {
+    @apply bg-surface rounded-xl shadow-card border border-border p-4;
+  }
+
+  /* ── Stat card ────────────────────────────────────────────────────── */
+  .stat-card {
+    @apply card flex flex-col gap-1;
+  }
+
+  /* ── Badge chip ───────────────────────────────────────────────────── */
+  .badge-chip {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  /* ── Focus ring (applied to interactive elements) ─────────────────── */
+  .focusable {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+
+  /* ── Skeleton block ───────────────────────────────────────────────── */
+  .skel {
+    @apply rounded-lg animate-skeleton bg-border;
+    background-size: 200% 100%;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}

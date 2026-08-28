@@ -1,0 +1,112 @@
+/* ============================================================
+   Design Tokens — Montessori ERP & LMS
+   Mirrors tailwind.config.js so CSS vars are available for
+   non-Tailwind contexts (SVG charts, canvas, etc.)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Baloo+2:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+:root {
+  /* ── Brand ──────────────────────────────────────────────────────────── */
+  --color-primary:       #3E4C8C;
+  --color-primary-dark:  #2E3A6E;
+  --color-primary-light: #6672AD;
+
+  --color-secondary:     #5C7A5A;
+  --color-secondary-dark:#46603F;
+
+  --color-accent:        #E3A83D;
+  --color-tertiary:      #C1694F;
+
+  /* Finance/HR shell accent — calmer than indigo */
+  --color-slate:         #52607A;
+
+  /* ── Neutrals ───────────────────────────────────────────────────────── */
+  --color-bg:            #F5F4F1;
+  --color-surface:       #FFFFFF;
+  --color-border:        #E2DFD8;
+  --color-text:          #1F2430;
+  --color-text-muted:    #5B5F6B;
+
+  /* ── Semantic ───────────────────────────────────────────────────────── */
+  --color-success:       #4B8B6F;
+  --color-warning:       #D6923B;
+  --color-danger:        #B24C3E;
+  --color-info:          #3E6FA8;
+
+  /* ── Role shell accents ─────────────────────────────────────────────── */
+  --shell-admin:         var(--color-primary);
+  --shell-teacher:       var(--color-secondary);
+  --shell-finance:       var(--color-slate);
+  --shell-parent:        var(--color-accent);
+  --shell-student:       var(--color-accent);
+
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --font-display:  'Bricolage Grotesque', sans-serif;
+  --font-body:     'Plus Jakarta Sans', sans-serif;
+  --font-playful:  'Baloo 2', sans-serif;
+  --font-mono:     'IBM Plex Mono', monospace;
+
+  /* ── Spacing scale ──────────────────────────────────────────────────── */
+  --radius-sm:    0.375rem;
+  --radius-md:    0.625rem;
+  --radius-lg:    0.875rem;
+  --radius-xl:    1.25rem;
+  --radius-full:  9999px;
+
+  /* ── Shadows ────────────────────────────────────────────────────────── */
+  --shadow-card:  0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-modal: 0 20px 60px -12px rgb(0 0 0 / 0.18);
+
+  /* ── Focus ring ─────────────────────────────────────────────────────── */
+  --focus-ring:   0 0 0 2px var(--color-primary);
+}
+
+/* ── Dark mode ──────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg:         #1B1D24;
+  --color-surface:    #23262F;
+  --color-border:     rgba(52, 56, 68, 0.7);
+  --color-text:       #EDEBE6;
+  --color-text-muted: #9A9DAA;
+}
+
+/* ── Base resets ────────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-body);
+  color: var(--color-text);
+  background-color: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Focus rings — WCAG AA accessible ──────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-muted); }
+
+/* ── Skeleton loader ────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, var(--color-border) 25%, color-mix(in srgb, var(--color-border) 60%, white) 50%, var(--color-border) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-wave 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes skeleton-wave {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

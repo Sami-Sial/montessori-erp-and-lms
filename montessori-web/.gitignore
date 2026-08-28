@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+build/
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.*.local
+
+# PWA generated files (built by next-pwa, not committed)
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+public/sw.js.map
+public/workbox-*.js.map
+
+# Misc
+.DS_Store
+*.log
+.vercel
+coverage/
