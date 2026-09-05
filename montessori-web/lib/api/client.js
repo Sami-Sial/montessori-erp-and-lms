@@ -85,8 +85,9 @@ export async function apiRequest(path, options = {}) {
 
   let response = await fetch(url, { ...fetchOptions, headers });
 
-  // Silent token refresh on 401
-  if (response.status === 401) {
+  // Silent token refresh on 401 (skip for auth routes to prevent masking login errors)
+  const isAuthRoute = path.includes('/auth/login') || path.includes('/auth/refresh');
+  if (response.status === 401 && !isAuthRoute) {
     try {
       const newToken = await silentRefresh();
       response = await fetch(url, {
@@ -95,7 +96,9 @@ export async function apiRequest(path, options = {}) {
       });
     } catch {
       clearAuth();
-      if (typeof window !== 'undefined') window.location.href = '/login';
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+         window.location.href = '/login';
+      }
       throw new Error('Session expired');
     }
   }
