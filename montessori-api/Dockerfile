@@ -4,12 +4,12 @@ WORKDIR /app
 # Install dependencies
 FROM base AS deps
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci --omit=dev --legacy-peer-deps
 
 # Build / generate Prisma client
 FROM base AS build
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npx prisma generate
 
