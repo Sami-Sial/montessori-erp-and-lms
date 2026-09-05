@@ -53,3 +53,79 @@
     "message": "Expected string, received null"
   }
 ]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "branchName"
+    ],
+    "message": "Required"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "branchName"
+    ],
+    "message": "Required"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "branchName"
+    ],
+    "message": "Required"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "branchName"
+    ],
+    "message": "Required"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "undefined",
+    "path": [
+      "branchName"
+    ],
+    "message": "Required"
+  }
+]
+[
+  {
+    "validation": "uuid",
+    "code": "invalid_string",
+    "message": "Invalid uuid",
+    "path": [
+      "curriculumId"
+    ]
+  },
+  {
+    "code": "too_small",
+    "minimum": 1,
+    "type": "number",
+    "inclusive": true,
+    "exact": false,
+    "message": "Number must be greater than or equal to 1",
+    "path": [
+      "capacity"
+    ]
+  }
+]

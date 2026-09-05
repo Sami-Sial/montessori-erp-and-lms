@@ -14,25 +14,28 @@ import { writeAuditLog } from '../../middleware/auditLog.js';
  * This is the single source of truth for what goes into the JWT claims.
  */
 export const loadUserClaims = async (userId) => {
-  const userRoles = await prisma.userRole.findMany({
-    where: { userId },
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
     include: {
-      role: {
-        include: {
-          rolePermissions: { include: { permission: true } },
-        },
-      },
-    },
+      userRoles: {
+        include: { role: { include: { rolePermissions: { include: { permission: true } } } } },
+      }
+    }
   });
 
-  const roles = userRoles.map((ur) => ur.role.name);
-  const permissions = [
+  const roles = user.userRoles.map((ur) => ur.role.name);
+  let permissions = [
     ...new Set(
-      userRoles.flatMap((ur) =>
+      user.userRoles.flatMap((ur) =>
         ur.role.rolePermissions.map((rp) => rp.permission.key)
       )
     ),
   ];
+
+  if (roles.includes('ORG_ADMIN') || roles.includes('SUPER_ADMIN')) {
+    const allPerms = await prisma.permission.findMany();
+    permissions = allPerms.map(p => p.key);
+  }
 
   return { roles, permissions };
 };
@@ -58,6 +61,7 @@ const buildAuthResponse = async (user, { deviceInfo, ipAddress } = {}) => {
       organizationId: user.organizationId,
       roles,
       permissions,
+      isEmailVerified: user.isEmailVerified,
     },
   };
 };
@@ -79,18 +83,10 @@ export const registerOrganization = async (data, meta = {}) => {
   const passwordHash = await argon2.hash(password, { type: argon2.argon2id });
   const emailVerifyToken = crypto.randomBytes(32).toString('hex');
 
-  // Create org, branch, and admin user in a transaction
+  // Create org and admin user in a transaction
   const result = await prisma.$transaction(async (tx) => {
     const org = await tx.organization.create({
       data: { name: orgName, slug: orgSlug },
-    });
-
-    const branch = await tx.branch.create({
-      data: {
-        organizationId: org.id,
-        name: branchName,
-        code: 'MAIN',
-      },
     });
 
     // Ensure system roles exist for this org
@@ -113,8 +109,8 @@ export const registerOrganization = async (data, meta = {}) => {
         firstName,
         lastName,
         phone: phone ?? null,
-        emailVerifyToken,
-        isEmailVerified: false,
+        emailVerifyToken: null,
+        isEmailVerified: true,
       },
     });
 
@@ -122,7 +118,7 @@ export const registerOrganization = async (data, meta = {}) => {
       data: { userId: user.id, roleId: orgAdminRole.id },
     });
 
-    return { org, branch, user, orgAdminRole };
+    return { org, user, orgAdminRole };
   });
 
   // Send verification email (non-blocking)
@@ -140,6 +136,7 @@ export const registerOrganization = async (data, meta = {}) => {
 export const login = async ({ email, password }, meta = {}) => {
   const user = await prisma.user.findUnique({
     where: { email },
+    include: { userRoles: { include: { role: true } } }
   });
 
   if (!user || !user.isActive) {

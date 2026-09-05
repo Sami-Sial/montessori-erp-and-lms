@@ -8,7 +8,6 @@ import { useToast } from '../../../lib/hooks/useToast';
 
 const schema = z.object({
   orgName:    z.string().min(2, 'School name is required'),
-  orgSlug:    z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and hyphens only'),
   firstName:  z.string().min(1, 'Required'),
   lastName:   z.string().min(1, 'Required'),
   email:      z.string().email('Invalid email address'),
@@ -52,7 +51,14 @@ export default function RegisterPage() {
   const onSubmit = async (data) => {
     try {
       const { authApi } = await import('../../../lib/api/auth');
-      const result = await authApi.register(data);
+      
+      const payload = {
+        ...data,
+        orgSlug: data.orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+        branchName: 'Main Campus'
+      };
+
+      const result = await authApi.register(payload);
       const { store } = await import('../../../store');
       const { setCredentials } = await import('../../../store/authSlice');
       store.dispatch(setCredentials(result));
@@ -72,13 +78,13 @@ export default function RegisterPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6" noValidate>
 
-        {/* School info section */}
+        {/* Combined Registration Form */}
         <div className="rounded-2xl border-2 border-[#E2DFD8] p-5 space-y-4 bg-white">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-7 h-7 rounded-lg bg-[#3E4C8C]/10 flex items-center justify-center">
               <Building2 size={14} className="text-[#3E4C8C]" />
             </div>
-            <p className="text-xs font-black text-[#3E4C8C] uppercase tracking-widest">School details</p>
+            <p className="text-xs font-black text-[#3E4C8C] uppercase tracking-widest">School & Admin Details</p>
           </div>
 
           <Field label="School name" id="orgName" error={errors.orgName?.message}>
@@ -86,33 +92,7 @@ export default function RegisterPage() {
               placeholder="Sunrise Montessori Academy" autoComplete="organization" />
           </Field>
 
-          <Field label="School URL" id="orgSlug" error={errors.orgSlug?.message} hint="Used in your account URL">
-            <div className="flex">
-              <span className="flex items-center px-3 bg-[#F5F4F1] border-2 border-r-0 border-[#E2DFD8] rounded-l-xl text-xs text-[#9A9DAA] whitespace-nowrap font-mono">
-                platform.app/
-              </span>
-              <input id="orgSlug" {...register('orgSlug')} placeholder="sunrise-montessori"
-                className={`flex-1 px-3 py-3 rounded-r-xl border-2 bg-white text-[#1F2430] text-sm font-mono placeholder:text-[#9A9DAA] focus:outline-none transition-colors ${
-                  errors.orgSlug ? 'border-red-400 focus:border-red-500' : 'border-[#E2DFD8] focus:border-[#3E4C8C]'
-                }`} />
-            </div>
-            {errors.orgSlug && <p className="mt-1.5 text-xs text-red-500 font-medium">{errors.orgSlug.message}</p>}
-          </Field>
-
-          <Field label="First campus name" id="branchName" error={errors.branchName?.message}>
-            <Input id="branchName" register={register('branchName')} error={errors.branchName}
-              placeholder="Main Campus" />
-          </Field>
-        </div>
-
-        {/* Admin account section */}
-        <div className="rounded-2xl border-2 border-[#E2DFD8] p-5 space-y-4 bg-white">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-7 h-7 rounded-lg bg-[#5C7A5A]/10 flex items-center justify-center">
-              <User size={14} className="text-[#5C7A5A]" />
-            </div>
-            <p className="text-xs font-black text-[#5C7A5A] uppercase tracking-widest">Your admin account</p>
-          </div>
+          <div className="pt-2 border-t border-[#E2DFD8]/60 mt-4 mb-2"></div>
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="First name" id="firstName" error={errors.firstName?.message}>
