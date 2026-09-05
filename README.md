@@ -19,7 +19,6 @@ All passwords: `Demo@1234`
 | `parent1@example.com` | Parent | Robert Johnson (Alex's father) |
 | `parent2@example.com` | Parent | Emily Johnson (Alex's mother — 2nd guardian) |
 | `parent3@example.com` | Parent | Carlos Rivera (Sofia's father) |
-| `student@sunrise.edu` | Student | Alex Johnson — gamified view |
 | `superadmin@platform.com` | Super Admin | Platform-level access |
 
 Demo school: **Sunrise Montessori Academy** — `http://localhost:3000/login`
@@ -96,7 +95,7 @@ See `SETUP.md` for full setup instructions including manual (non-Docker) setup.
 - **27 permission keys** — e.g. `attendance:mark`, `finance:write`, `ai:chat` — each checked via `requirePermission()` middleware
 - **Customisable** — admins can add/remove permissions from roles without a code deploy
 - **Frontend enforcement** — `useHasPermission('key')` hook hides UI elements; backend always re-validates
-- **8 built-in roles** — SUPER_ADMIN, ORG_ADMIN, BRANCH_ADMIN, TEACHER, GUIDE, PARENT, STUDENT, FINANCE_STAFF, HR_STAFF, FRONT_DESK
+- **7 built-in roles** — SUPER_ADMIN, ORG_ADMIN, BRANCH_ADMIN, TEACHER, PARENT, FINANCE_STAFF, HR_STAFF, FRONT_DESK
 
 ### Role-Specific Dashboard Shells
 
@@ -106,7 +105,7 @@ Each role gets a **genuinely different layout**, not one shell with hidden menu 
 |---|---|---|---|
 | Admin / Principal | Dense, table-first | Collapsible left rail | Indigo `#3E4C8C` |
 | Teacher / Guide | Card-first, visual | Sticky top bar + horizontal tabs | Moss `#5C7A5A` |
-| Parent | Card-first, warm | Bottom tab bar (mobile) | Marigold `#E3A83D` |
+| Parent | Minimal, clean | Top nav, readable fonts | Slate + Primary |
 | Finance / HR | Dense, data-first | Fixed left sidebar with sections | Slate `#52607A` |
 | Student | Full-bleed, game-like | Bottom tabs, playful font | Marigold + Clay |
 
@@ -193,7 +192,7 @@ Each role gets a **genuinely different layout**, not one shell with hidden menu 
 - **Real-time delivery** — Socket.IO pushes new announcements and messages to connected users instantly
 - **Email notifications** — SMTP-based email for attendance check-in/out, invoice overdue alerts, and invitations
 
-### Gamification (Student-Facing)
+### Gamification
 
 - **Badge system** — custom badges with names, descriptions, colours, and point values
 - **Award workflow** — teachers award badges linked to milestones, with optional personal note
@@ -356,9 +355,8 @@ skyelax-assignment/
 │   │   ├── (teacher)/teacher/ # Teacher dashboards and pages
 │   │   ├── (parent)/parent/ # Parent dashboards and pages
 │   │   ├── (finance)/finance/ # Finance/HR dashboards and pages
-│   │   └── (student)/student/ # Gamified student shell
 │   ├── components/
-│   │   ├── shells/          # AdminShell, TeacherShell, ParentShell, FinanceShell, StudentShell
+│   │   ├── shells/          # AdminShell, TeacherShell, ParentShell, FinanceShell
 │   │   └── shared/          # ProtectedRoute, AIChatWidget, SyncStatusIndicator, Toast…
 │   ├── lib/
 │   │   ├── api/             # Typed fetch wrappers for every module
@@ -381,7 +379,7 @@ skyelax-assignment/
 
 | Category | Marks | Where demonstrated |
 |---|---|---|
-| **UI/UX** | 50 | 5 distinct role shells, custom design tokens (`styles/theme.css`), 4 typefaces, skeleton loaders, optimistic UI, tablet-first attendance, WCAG AA contrast, keyboard navigation, ARIA labels |
+| **UI/UX** | 50 | 4 distinct role shells, custom design tokens (`styles/theme.css`), 4 typefaces, skeleton loaders, optimistic UI, tablet-first attendance, WCAG AA contrast, keyboard navigation, ARIA labels |
 | **Database design** | 50 | 62 Prisma models, full ERD in `montessori-api/README.md`, indexes on every FK, @@unique constraints, soft deletes, Decimal money fields |
 | **Required features** | 100 | Auth + RBAC, Student profiles, QR attendance, Curriculum + observations, Finance + HR + Inventory, Communication, Gamification — all fully implemented |
 | **Additional features** | 20 | Day-in-review AI digest, photo observation tagging, classroom material tracker, English + Spanish i18n, conference report generator |

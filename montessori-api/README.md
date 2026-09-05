@@ -77,14 +77,12 @@ All passwords: `Demo@1234`
 | `principal@sunrise.edu` | ORG_ADMIN | Sunrise Montessori Academy |
 | `branchadmin@sunrise.edu` | BRANCH_ADMIN | Main Campus |
 | `teacher@sunrise.edu` | TEACHER | Lead Teacher, Sunflower Room |
-| `guide@sunrise.edu` | GUIDE | Oak Room |
 | `finance@sunrise.edu` | FINANCE_STAFF | Finance team |
 | `hr@sunrise.edu` | HR_STAFF | HR team |
 | `frontdesk@sunrise.edu` | FRONT_DESK | Reception |
 | `parent1@example.com` | PARENT | Robert Johnson (father of Alex) |
 | `parent2@example.com` | PARENT | Emily Johnson (mother of Alex — 2nd guardian) |
 | `parent3@example.com` | PARENT | Carlos Rivera (father of Sofia) |
-| `student@sunrise.edu` | STUDENT | Alex Johnson |
 
 ---
 
