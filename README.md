@@ -6,8 +6,18 @@ A production-grade, multi-tenant **Montessori School ERP and Learning Management
 
 ## Live Demo Credentials
 
+*This platform is fully **multi-tenant**, meaning it supports managing multiple independent schools from a single codebase.*
+
 All passwords: `Demo@1234`
 
+### Platform Administration (Super Admin)
+Manage all schools, organizations, and global settings.
+| Email | Role | Access |
+|---|---|---|
+| `superadmin@platform.com` | Super Admin | Platform-level access |
+
+### School 1: Sunrise Montessori Academy
+A complete demo school with students, classrooms, and staff.
 | Email | Role | Access |
 |---|---|---|
 | `principal@sunrise.edu` | Principal / Org Admin | Full school management |
@@ -18,9 +28,8 @@ All passwords: `Demo@1234`
 | `parent1@example.com` | Parent | Robert Johnson (Alex's father) |
 | `parent2@example.com` | Parent | Emily Johnson (Alex's mother — 2nd guardian) |
 | `parent3@example.com` | Parent | Carlos Rivera (Sofia's father) |
-| `superadmin@platform.com` | Super Admin | Platform-level access |
 
-Demo school: **Sunrise Montessori Academy** — `http://localhost:3000/login`
+Demo login URL: `http://localhost:3000/login`
 
 ---
 
