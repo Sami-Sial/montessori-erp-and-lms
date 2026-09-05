@@ -118,6 +118,93 @@ export const registerOrganization = async (data, meta = {}) => {
       data: { userId: user.id, roleId: orgAdminRole.id },
     });
 
+    // Create default academic year
+    await tx.academicYear.create({
+      data: {
+        organizationId: org.id,
+        name: '2025-2026',
+        startDate: new Date('2025-08-01T00:00:00Z'),
+        endDate: new Date('2026-06-30T00:00:00Z'),
+        isCurrent: true
+      }
+    });
+
+    // Create default curriculums
+    await tx.curriculum.create({
+      data: {
+        organizationId: org.id, name: 'Toddler Community', description: 'Montessori Toddler Curriculum', isDefault: true, targetAgeMin: 1.5, targetAgeMax: 3.0,
+        areas: {
+          create: [
+            { name: 'Practical Life', sortOrder: 1, colorHex: '#4ade80', iconName: 'Hand' },
+            { name: 'Sensorial', sortOrder: 2, colorHex: '#fbbf24', iconName: 'Eye' },
+            { name: 'Language', sortOrder: 3, colorHex: '#f87171', iconName: 'MessageCircle' },
+            { name: 'Motor Skills', sortOrder: 4, colorHex: '#60a5fa', iconName: 'Activity' }
+          ]
+        }
+      }
+    });
+
+    await tx.curriculum.create({
+      data: {
+        organizationId: org.id, name: 'Children\'s House (Primary)', description: 'Montessori Primary Curriculum', isDefault: true, targetAgeMin: 3.0, targetAgeMax: 6.0,
+        areas: {
+          create: [
+            { name: 'Practical Life', sortOrder: 1, colorHex: '#4ade80', iconName: 'Hand', milestones: { create: [{ title: 'Pouring Dry Goods', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Dressing Frames', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Food Preparation', ageGroupMin: 3.0, ageGroupMax: 6.0 }] } },
+            { name: 'Sensorial', sortOrder: 2, colorHex: '#fbbf24', iconName: 'Eye', milestones: { create: [{ title: 'Pink Tower', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Brown Stair', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Color Tablets', ageGroupMin: 3.0, ageGroupMax: 6.0 }] } },
+            { name: 'Language', sortOrder: 3, colorHex: '#f87171', iconName: 'MessageCircle', milestones: { create: [{ title: 'Sandpaper Letters', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Moveable Alphabet', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Metal Insets', ageGroupMin: 3.0, ageGroupMax: 6.0 }] } },
+            { name: 'Mathematics', sortOrder: 4, colorHex: '#60a5fa', iconName: 'Calculator', milestones: { create: [{ title: 'Number Rods', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Sandpaper Numerals', ageGroupMin: 3.0, ageGroupMax: 6.0 }, { title: 'Spindle Boxes', ageGroupMin: 3.0, ageGroupMax: 6.0 }] } },
+            { name: 'Cultural Studies', sortOrder: 5, colorHex: '#a78bfa', iconName: 'Globe' }
+          ]
+        }
+      }
+    });
+
+    await tx.curriculum.create({
+      data: {
+        organizationId: org.id, name: 'Lower Elementary', description: 'Montessori Lower Elementary Curriculum', isDefault: true, targetAgeMin: 6.0, targetAgeMax: 9.0,
+        areas: {
+          create: [
+            { name: 'Mathematics', sortOrder: 1, colorHex: '#60a5fa', iconName: 'Calculator' },
+            { name: 'Geometry', sortOrder: 2, colorHex: '#c084fc', iconName: 'Shapes' },
+            { name: 'Language', sortOrder: 3, colorHex: '#f87171', iconName: 'MessageCircle' },
+            { name: 'Biology', sortOrder: 4, colorHex: '#4ade80', iconName: 'Leaf' },
+            { name: 'Geography', sortOrder: 5, colorHex: '#fbbf24', iconName: 'Globe' },
+            { name: 'History', sortOrder: 6, colorHex: '#f472b6', iconName: 'Clock' }
+          ]
+        }
+      }
+    });
+
+    await tx.curriculum.create({
+      data: {
+        organizationId: org.id, name: 'Upper Elementary', description: 'Montessori Upper Elementary Curriculum', isDefault: true, targetAgeMin: 9.0, targetAgeMax: 12.0,
+        areas: {
+          create: [
+            { name: 'Mathematics', sortOrder: 1, colorHex: '#60a5fa', iconName: 'Calculator' },
+            { name: 'Geometry', sortOrder: 2, colorHex: '#c084fc', iconName: 'Shapes' },
+            { name: 'Language', sortOrder: 3, colorHex: '#f87171', iconName: 'MessageCircle' },
+            { name: 'Biology', sortOrder: 4, colorHex: '#4ade80', iconName: 'Leaf' },
+            { name: 'Geography', sortOrder: 5, colorHex: '#fbbf24', iconName: 'Globe' },
+            { name: 'History', sortOrder: 6, colorHex: '#f472b6', iconName: 'Clock' }
+          ]
+        }
+      }
+    });
+
+    await tx.curriculum.create({
+      data: {
+        organizationId: org.id, name: 'Adolescent', description: 'Montessori Adolescent Curriculum', isDefault: true, targetAgeMin: 12.0, targetAgeMax: 15.0,
+        areas: {
+          create: [
+            { name: 'Occupations', sortOrder: 1, colorHex: '#60a5fa', iconName: 'Briefcase' },
+            { name: 'Humanities', sortOrder: 2, colorHex: '#f472b6', iconName: 'Users' },
+            { name: 'Sciences', sortOrder: 3, colorHex: '#4ade80', iconName: 'Microscope' },
+            { name: 'Expression', sortOrder: 4, colorHex: '#fbbf24', iconName: 'Palette' }
+          ]
+        }
+      }
+    });
+
     return { org, user, orgAdminRole };
   });
 

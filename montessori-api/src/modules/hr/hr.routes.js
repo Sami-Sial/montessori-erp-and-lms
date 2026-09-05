@@ -129,6 +129,11 @@ router.post('/staff', requirePermission('hr:write'), validate(staffCreateSchema)
     });
     if (existingUser) throw new AppError('CONFLICT', 'Email already in use', 409);
 
+    if (!staffData.employeeNumber) {
+      const count = await prisma.staff.count({ where: { organizationId: req.organizationId } });
+      staffData.employeeNumber = `EMP-${(count + 1).toString().padStart(4, '0')}`;
+    }
+
     const existingStaff = await prisma.staff.findFirst({
       where: { organizationId: req.organizationId, employeeNumber: staffData.employeeNumber, deletedAt: null },
     });
@@ -137,18 +142,32 @@ router.post('/staff', requirePermission('hr:write'), validate(staffCreateSchema)
     const password = crypto.randomBytes(8).toString('hex');
     const passwordHash = await argon2.hash(password);
 
+    const actualRole = await prisma.role.findFirst({
+      where: {
+        name: role,
+        OR: [{ organizationId: req.organizationId }, { organizationId: null }]
+      }
+    });
+
     const staff = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
+          organizationId: req.organizationId,
           firstName,
           lastName,
           email,
-          phone,
+          phone: phone || null,
           passwordHash,
-          role,
+          isEmailVerified: true,
           isActive: true,
         },
       });
+
+      if (actualRole) {
+        await tx.userRole.create({
+          data: { userId: user.id, roleId: actualRole.id },
+        });
+      }
 
       return await tx.staff.create({
         data: {
