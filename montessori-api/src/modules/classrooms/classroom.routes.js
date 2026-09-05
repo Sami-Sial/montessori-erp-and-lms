@@ -20,7 +20,7 @@ router.use(authenticate, scopeTenant);
 
 const classroomSchema = z.object({
   academicYearId: z.string().uuid().optional(),
-  curriculumId:   z.string().uuid().optional().nullable(),
+  curriculumId:   z.string().uuid(),
   name:           z.string().min(1).max(100),
   ageGroupMin:    z.coerce.number().min(0).max(18),
   ageGroupMax:    z.coerce.number().min(0).max(18),
@@ -112,23 +112,17 @@ router.get('/:id', requirePermission('student:read'), async (req, res, next) => 
 
 router.post('/', requirePermission('curriculum:write'), validate(classroomSchema), async (req, res, next) => {
   try {
-    let { branchId, academicYearId, studentIds, staffIds, ...rest } = req.body;
-    
-    if (!branchId) {
-      const branch = await prisma.branch.findFirst({ where: { organizationId: req.organizationId } });
-      if (!branch) throw new AppError('BAD_REQUEST', 'No branches found in organization', 400);
-      branchId = branch.id;
-    }
+    let { academicYearId, studentIds, staffIds, ...rest } = req.body;
     
     if (!academicYearId) {
-      const year = await prisma.academicYear.findFirst({ where: { organizationId: req.organizationId, isActive: true } });
+      const year = await prisma.academicYear.findFirst({ where: { organizationId: req.organizationId, isCurrent: true } });
       if (!year) throw new AppError('BAD_REQUEST', 'No active academic year found in organization', 400);
       academicYearId = year.id;
     }
 
     const classroom = await prisma.$transaction(async (tx) => {
       const cls = await tx.classroom.create({
-        data: { organizationId: req.organizationId, branchId, academicYearId, ...rest },
+        data: { organizationId: req.organizationId, academicYearId, ...rest },
       });
 
       if (studentIds && studentIds.length > 0) {
@@ -210,7 +204,7 @@ router.post('/:id/enroll', requirePermission('curriculum:write'), validate(enrol
     if (!classroom) throw new AppError('NOT_FOUND', 'Classroom not found', 404);
     assertTenantOwnership(classroom.organizationId, req.organizationId);
     
-    const year = await prisma.academicYear.findFirst({ where: { organizationId: req.organizationId, isActive: true } });
+    const year = await prisma.academicYear.findFirst({ where: { organizationId: req.organizationId, isCurrent: true } });
     if (!year) throw new AppError('BAD_REQUEST', 'No active academic year found in organization', 400);
 
     const enrollment = await prisma.$transaction(async (tx) => {
@@ -271,7 +265,7 @@ router.post('/:id/staff', requirePermission('curriculum:write'), validate(assign
     if (!classroom) throw new AppError('NOT_FOUND', 'Classroom not found', 404);
     assertTenantOwnership(classroom.organizationId, req.organizationId);
 
-    const year = await prisma.academicYear.findFirst({ where: { organizationId: req.organizationId, isActive: true } });
+    const year = await prisma.academicYear.findFirst({ where: { organizationId: req.organizationId, isCurrent: true } });
     if (!year) throw new AppError('BAD_REQUEST', 'No active academic year found in organization', 400);
 
     const existing = await prisma.staffAssignment.findFirst({

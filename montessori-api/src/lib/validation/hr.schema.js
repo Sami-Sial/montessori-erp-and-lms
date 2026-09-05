@@ -6,7 +6,7 @@ export const staffCreateSchema = z.object({
   email:           z.string().email(),
   phone:           z.string().optional().nullable(),
   role:            z.enum(['TEACHER', 'HR_STAFF', 'FINANCE_STAFF', 'ADMIN', 'FRONT_DESK']).default('TEACHER'),
-  employeeNumber:  z.string().min(1).max(30),
+  employeeNumber:  z.string().max(30).optional(),
   jobTitle:        z.string().min(1).max(100),
   department:      z.string().optional().nullable(),
   employmentType:  z.enum(['FULL_TIME','PART_TIME','CONTRACT','INTERN']).default('FULL_TIME'),

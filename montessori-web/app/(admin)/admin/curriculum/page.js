@@ -73,6 +73,16 @@ export default function AdminCurriculumPage() {
     onError: (err) => toast.error('Failed to create area', err.message)
   });
 
+  const updateAreaMut = useMutation({
+    mutationFn: (data) => curriculumApi.updateArea(data.id, data),
+    onSuccess: () => {
+      toast.success('Area updated');
+      qc.invalidateQueries({ queryKey: ['curriculum', 'areas'] });
+      setShowAreaForm(false);
+    },
+    onError: (err) => toast.error('Failed to update area', err.message)
+  });
+
   const [showMilestoneForm, setShowMilestoneForm] = useState(false);
   const [milestoneFormData, setMilestoneFormData] = useState({ areaId: '', title: '', description: '', ageGroupMin: 3, ageGroupMax: 6 });
   const createMilestoneMut = useMutation({
@@ -210,7 +220,12 @@ export default function AdminCurriculumPage() {
                                 {AREA_ICONS[area.name] ?? '📚'}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-ink text-base truncate" style={{ color: area.colorHex }}>{area.name}</h3>
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-bold text-ink text-base truncate" style={{ color: area.colorHex }}>{area.name}</h3>
+                                  <button onClick={(e) => { e.stopPropagation(); setAreaFormData(area); setShowAreaForm(true); }} className="text-muted hover:text-primary transition-colors p-1 rounded-md hover:bg-bg/50">
+                                    <Edit2 size={14} />
+                                  </button>
+                                </div>
                                 <p className="text-sm text-muted mt-0.5">{area.milestones?.length ?? 0} milestones</p>
                               </div>
                               <div className="pt-2">
@@ -302,31 +317,32 @@ export default function AdminCurriculumPage() {
 
           {/* Create Area Modal */}
           {showAreaForm && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 ">
-              <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
-                <div className="flex items-center justify-between p-5 border-b border-border bg-gradient-to-r from-bg to-surface">
-                  <h2 className="font-display font-bold text-xl text-ink">Add Learning Area</h2>
-                  <button onClick={() => setShowAreaForm(false)} className="p-1.5 text-muted hover:text-ink rounded-lg hover:bg-bg focusable transition-colors">
-                    <X size={20} />
-                  </button>
+            <div className="fixed inset-0 bg-ink/20 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-surface rounded-2xl shadow-xl border border-border w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="flex items-center justify-between p-4 border-b border-border bg-bg/50">
+                  <h2 className="font-display font-bold text-lg text-ink flex items-center gap-2">
+                    <Box size={20} className="text-primary" /> {areaFormData.id ? 'Edit Area' : 'New Learning Area'}
+                  </h2>
+                  <button onClick={() => setShowAreaForm(false)} className="p-1 rounded-md text-muted hover:bg-border hover:text-ink transition-colors focusable"><X size={20} /></button>
                 </div>
-                <form onSubmit={(e) => { e.preventDefault(); createAreaMut.mutate(areaFormData); }} className="flex flex-col">
-                  <div className="p-6 space-y-5">
-                    <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">Name <span className="text-red-500">*</span></label>
-                      <input required type="text" value={areaFormData.name} onChange={e => setAreaFormData({...areaFormData, name: e.target.value})} placeholder="e.g. Practical Life" className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg text-sm focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-inner" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-ink mb-1.5">Color Hex</label>
-                      <input type="text" value={areaFormData.colorHex} onChange={e => setAreaFormData({...areaFormData, colorHex: e.target.value})} placeholder="#4CAF50" className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg text-sm focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-inner" />
-                    </div>
+                <form onSubmit={(e) => {
+                  e.preventDefault();
+                  if (areaFormData.id) updateAreaMut.mutate(areaFormData);
+                  else createAreaMut.mutate(areaFormData);
+                }} className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-ink mb-1.5">Name <span className="text-red-500">*</span></label>
+                    <input required type="text" value={areaFormData.name} onChange={e => setAreaFormData({...areaFormData, name: e.target.value})} placeholder="e.g. Practical Life" className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg text-sm focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-inner" />
                   </div>
-                  <div className="p-5 border-t border-border bg-bg/50 flex justify-end gap-3">
-                    <button type="button" onClick={() => setShowAreaForm(false)} className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted hover:text-ink hover:bg-surface focusable transition-colors">
-                      Cancel
-                    </button>
-                    <button type="submit" disabled={createAreaMut.isPending} className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark disabled:opacity-50 focusable transition-all shadow-sm">
-                      {createAreaMut.isPending ? 'Creating...' : 'Create Area'}
+                  <div>
+                    <label className="block text-sm font-semibold text-ink mb-1.5">Color Hex</label>
+                    <input type="text" value={areaFormData.colorHex} onChange={e => setAreaFormData({...areaFormData, colorHex: e.target.value})} placeholder="#4CAF50" className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg text-sm focus:ring-2 focus:ring-primary focus:outline-none transition-all shadow-inner" />
+                  </div>
+                  <div className="pt-4 flex justify-end gap-2">
+                    <button type="button" onClick={() => setShowAreaForm(false)} className="px-4 py-2 rounded-lg text-sm font-medium text-ink bg-surface border border-border hover:bg-bg transition-colors focusable">Cancel</button>
+                    <button type="submit" disabled={createAreaMut.isPending || updateAreaMut.isPending} className="px-4 py-2 rounded-lg text-sm font-bold text-white bg-primary hover:bg-primary-dark transition-colors focusable shadow-sm flex items-center gap-2 disabled:opacity-50">
+                      {createAreaMut.isPending || updateAreaMut.isPending ? <span className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> : <Check size={16} />}
+                      {areaFormData.id ? 'Save Changes' : 'Create Area'}
                     </button>
                   </div>
                 </form>

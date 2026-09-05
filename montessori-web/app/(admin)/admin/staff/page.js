@@ -26,7 +26,7 @@ export default function AdminStaffPage() {
   // Form states
   const [staffForm, setStaffForm] = useState({
     firstName: '', lastName: '', email: '', phone: '', role: 'TEACHER', 
-    employeeNumber: '', jobTitle: '', employmentType: 'FULL_TIME', 
+    jobTitle: '', employmentType: 'FULL_TIME', 
     startDate: '', salary: '', currency: 'USD'
   });
 
@@ -100,7 +100,7 @@ export default function AdminStaffPage() {
   const openAddStaff = () => {
     setStaffForm({
       firstName: '', lastName: '', email: '', phone: '', role: 'TEACHER', 
-      employeeNumber: `EMP-${Math.floor(Math.random()*10000)}`, jobTitle: '', employmentType: 'FULL_TIME', 
+      jobTitle: '', employmentType: 'FULL_TIME', 
       startDate: new Date().toISOString().split('T')[0], salary: '', currency: 'USD'
     });
     setSelectedStaff(null);
@@ -110,7 +110,7 @@ export default function AdminStaffPage() {
   const openEditStaff = (staff) => {
     setStaffForm({
       firstName: staff.user?.firstName || '', lastName: staff.user?.lastName || '', email: staff.user?.email || '', phone: staff.user?.phone || '', role: staff.user?.role || 'TEACHER',
-      employeeNumber: staff.employeeNumber, jobTitle: staff.jobTitle, employmentType: staff.employmentType, 
+      jobTitle: staff.jobTitle, employmentType: staff.employmentType, 
       startDate: new Date(staff.startDate).toISOString().split('T')[0], salary: staff.salary || '', currency: staff.currency
     });
     setSelectedStaff(staff);
@@ -317,11 +317,7 @@ export default function AdminStaffPage() {
 
                 <hr className="border-border my-2" />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Employee #</label>
-                    <input required disabled={!!selectedStaff} type="text" value={staffForm.employeeNumber} onChange={e=>setStaffForm({...staffForm, employeeNumber: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50" />
-                  </div>
+                <div className="grid grid-cols-1 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-1">Job Title</label>
                     <input required type="text" value={staffForm.jobTitle} onChange={e=>setStaffForm({...staffForm, jobTitle: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:outline-none focus:ring-2 focus:ring-primary" placeholder="e.g. Lead Guide" />

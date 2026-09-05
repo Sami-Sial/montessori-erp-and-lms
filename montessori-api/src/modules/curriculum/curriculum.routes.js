@@ -378,21 +378,23 @@ router.get('/materials', requirePermission('curriculum:read'), async (req, res, 
 router.post('/areas', requirePermission('curriculum:write'), validate(z.object({
   curriculumId: z.string().uuid(),
   name: z.string().min(1),
-  description: z.string().optional(),
-  colorHex: z.string().optional(),
-  iconName: z.string().optional(),
+  description: z.string().optional().nullable(),
+  colorHex: z.string().optional().nullable(),
+  iconName: z.string().optional().nullable(),
 })), async (req, res, next) => {
   try {
-    const area = await prisma.curriculumArea.create({ data: req.body });
+    const area = await prisma.curriculumArea.create({
+      data: req.body,
+    });
     res.status(201).json(area);
   } catch (err) { next(err); }
 });
 
 router.patch('/areas/:id', requirePermission('curriculum:write'), validate(z.object({
   name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  colorHex: z.string().optional(),
-  iconName: z.string().optional(),
+  description: z.string().optional().nullable(),
+  colorHex: z.string().optional().nullable(),
+  iconName: z.string().optional().nullable(),
 })), async (req, res, next) => {
   try {
     const area = await prisma.curriculumArea.update({

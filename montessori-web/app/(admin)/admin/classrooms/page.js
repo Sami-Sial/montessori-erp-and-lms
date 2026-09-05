@@ -121,7 +121,7 @@ export default function AdminClassroomsPage() {
   });
 
   const openAddModal = () => {
-    setFormData({ name: '', ageGroupMin: '', ageGroupMax: '', capacity: '', roomNumber: '', curriculumId: '' });
+    setFormData({ name: '', ageGroupMin: '', ageGroupMax: '', capacity: 25, roomNumber: '', curriculumId: '' });
     setSelectedClassroom(null);
     setSelectedStudentIds([]);
     setSelectedStaffIds([]);
@@ -142,11 +142,18 @@ export default function AdminClassroomsPage() {
     setModalMode('edit');
   };
 
-  const handlePresetChange = (e) => {
-    const val = e.target.value;
-    if (val) {
-      const [min, max] = val.split('-');
-      setFormData(prev => ({ ...prev, ageGroupMin: min, ageGroupMax: max }));
+  const handleCurriculumChange = (e) => {
+    const id = e.target.value;
+    const curriculum = curricula?.find(c => c.id === id);
+    if (curriculum) {
+      setFormData(prev => ({
+        ...prev,
+        curriculumId: id,
+        ageGroupMin: curriculum.targetAgeMin ?? prev.ageGroupMin,
+        ageGroupMax: curriculum.targetAgeMax ?? prev.ageGroupMax
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, curriculumId: id }));
     }
   };
 
@@ -166,6 +173,11 @@ export default function AdminClassroomsPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formData.name?.trim()) return toast.error('Classroom name is required');
+    if (!formData.curriculumId) return toast.error('Curriculum Standard is required');
+    if (!formData.ageGroupMin || !formData.ageGroupMax) return toast.error('Min and Max ages are required');
+    if (!formData.capacity || Number(formData.capacity) < 1) return toast.error('Capacity must be at least 1');
+
     const payload = {
       ...formData,
       ageGroupMin: Number(formData.ageGroupMin),
@@ -304,20 +316,8 @@ export default function AdminClassroomsPage() {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium mb-1">Montessori Environment Preset <span className="text-muted font-normal">(Optional)</span></label>
-                      <select onChange={handlePresetChange} defaultValue="" className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
-                        <option value="">Custom / Manual</option>
-                        <option value="1.5-3">Toddler / Nido (1.5 – 3 years)</option>
-                        <option value="3-6">Primary / Children's House (3 – 6 years)</option>
-                        <option value="6-9">Lower Elementary (6 – 9 years)</option>
-                        <option value="9-12">Upper Elementary (9 – 12 years)</option>
-                        <option value="12-15">Adolescent (12 – 15 years)</option>
-                      </select>
-                    </div>
-
-                    <div>
                       <label className="block text-sm font-medium mb-1">Curriculum Standard <span className="text-red-500">*</span></label>
-                      <select required value={formData.curriculumId} onChange={e => setFormData({...formData, curriculumId: e.target.value})} className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                      <select required value={formData.curriculumId} onChange={handleCurriculumChange} className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:outline-none focus:ring-2 focus:ring-primary">
                         <option value="" disabled>Select a curriculum standard</option>
                         {curricula?.map(c => (
                           <option key={c.id} value={c.id}>{c.name}</option>

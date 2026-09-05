@@ -19,7 +19,7 @@ export const studentCreateSchema = z.object({
   doctorName:     z.string().optional().nullable(),
   doctorPhone:    z.string().optional().nullable(),
   classroomId:    z.string().uuid(),
-  joinedAcademicYearId: z.string().uuid().optional(),
+  joinedAcademicYearId: z.string().uuid().optional().nullable(),
 });
 
 export const studentUpdateSchema = studentCreateSchema.partial();
