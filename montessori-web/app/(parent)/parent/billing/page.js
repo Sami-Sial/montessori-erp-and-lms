@@ -18,7 +18,9 @@ const STATUS_CHIP = {
 
 const fmt = (n) => `$${Number(n ?? 0).toFixed(2)}`;
 
-export default function ParentBillingPage() {
+import { Suspense } from 'react';
+
+function BillingContent() {
   const searchParams = useSearchParams();
   const paymentStatus = searchParams.get('status');
   const paidInvoice = searchParams.get('invoice');
@@ -364,5 +366,13 @@ export default function ParentBillingPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ParentBillingPage() {
+  return (
+    <Suspense fallback={<div>Loading billing...</div>}>
+      <BillingContent />
+    </Suspense>
   );
 }

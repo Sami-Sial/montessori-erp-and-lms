@@ -5,7 +5,9 @@ import { authApi } from '../../../lib/api/auth';
 import { CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
-export default function VerifyEmailPage() {
+import { Suspense } from 'react';
+
+function VerifyEmailContent() {
   const params = useSearchParams();
   const token = params.get('token') ?? '';
   const [state, setState] = useState('loading'); // loading | success | error
@@ -36,5 +38,13 @@ export default function VerifyEmailPage() {
         <Link href="/login" className="text-primary text-sm hover:underline focusable">Back to login</Link></>
       )}
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div>Loading verification...</div>}>
+      <VerifyEmailContent />
+    </Suspense>
   );
 }

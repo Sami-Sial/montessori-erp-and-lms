@@ -13,7 +13,9 @@ const schema = z.object({
   password:  z.string().min(8).regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'Must include upper, lower, and number'),
 });
 
-export default function AcceptInvitePage() {
+import { Suspense } from 'react';
+
+function AcceptInviteContent() {
   const params = useSearchParams();
   const router = useRouter();
   const toast = useToast();
@@ -71,5 +73,13 @@ export default function AcceptInvitePage() {
         </button>
       </form>
     </div>
+  );
+}
+
+export default function AcceptInvitePage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AcceptInviteContent />
+    </Suspense>
   );
 }

@@ -14,7 +14,9 @@ const MASTERY_CONFIG = {
   EXTENDING:      { label: 'Extending',   pct: 100, color: 'bg-accent',   text: 'text-amber-700' },
 };
 
-export default function ParentProgressPage() {
+import { Suspense } from 'react';
+
+function ProgressContent() {
   const params = useSearchParams();
   const childIdParam = params.get('childId');
   const [selectedChildId, setSelectedChildId] = useState(null);
@@ -125,5 +127,13 @@ export default function ParentProgressPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function ParentProgressPage() {
+  return (
+    <Suspense fallback={<div>Loading progress...</div>}>
+      <ProgressContent />
+    </Suspense>
   );
 }
