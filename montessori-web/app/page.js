@@ -1,35 +1,36 @@
-'use client';
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-
 /**
- * Root page — simple redirect based on whether a refresh token exists in
- * localStorage. No API call here — just a fast local check.
+ * Root route — serves two completely different experiences:
  *
- * If a token exists → go to /dashboard-redirect (which does the real auth check)
- * If no token → go to /auth/login
+ *  Unauthenticated visitors  →  Public marketing homepage (Server Component, no JS needed)
+ *  Users with a saved token  →  Client-side redirect to dashboard-redirect
  *
- * This avoids any race between the Redux store hydrating and the redirect firing.
+ * The trick: render the homepage content as-is (Server Component),
+ * and overlay a thin Client Component that reads localStorage and
+ * redirects authenticated users WITHOUT blocking the initial render.
  */
+import HomePageContent from '../components/marketing/HomePageContent';
+import Navbar from '../components/marketing/Navbar';
+import Footer from '../components/marketing/Footer';
+import AuthRedirector from '../components/shared/AuthRedirector';
+
 export default function RootPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    const token = localStorage.getItem('refreshToken');
-    if (token) {
-      // Has a stored token — try to restore session on the dashboard
-      router.replace('/dashboard-redirect');
-    } else {
-      router.replace('/login');
-    }
-  }, [router]);
-
   return (
-    <div className="min-h-screen bg-[#F5F4F1] flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-[#3E4C8C]/20 animate-pulse" />
-        <p className="text-[#5B5F6B] text-sm">Loading…</p>
+    <>
+      {/*
+        AuthRedirector is a Client Component that runs after hydration.
+        If a refreshToken exists in localStorage it silently replaces the
+        URL with /dashboard-redirect — no flash, no blocking the render.
+      */}
+      <AuthRedirector />
+
+      {/* Public homepage — visible to everyone until redirect fires */}
+      <div className="min-h-screen flex flex-col bg-white">
+        <Navbar />
+        <main className="flex-1 pt-16">
+          <HomePageContent />
+        </main>
+        <Footer />
       </div>
-    </div>
+    </>
   );
 }

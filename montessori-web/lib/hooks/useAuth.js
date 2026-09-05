@@ -25,16 +25,13 @@ export function useAuth() {
       // Role-based redirect
       const role = data.user.roles?.[0];
       const redirectMap = {
-        SUPER_ADMIN:   '/admin/dashboard',
+        SUPER_ADMIN:   '/superadmin/dashboard',
         ORG_ADMIN:     '/admin/dashboard',
-        BRANCH_ADMIN:  '/admin/dashboard',
-        TEACHER:       '/teacher/dashboard',
-        GUIDE:         '/teacher/dashboard',
+                TEACHER:       '/teacher/dashboard',
         PARENT:        '/parent/dashboard',
-        STUDENT:       '/student/dashboard',
         FINANCE_STAFF: '/finance/dashboard',
-        HR_STAFF:      '/finance/dashboard',
-        FRONT_DESK:    '/teacher/attendance',
+        HR_STAFF:      '/hr/dashboard',
+        FRONT_DESK:    '/frontdesk/dashboard',
       };
       router.push(redirectMap[role] ?? '/admin/dashboard');
     } catch (err) {
@@ -46,14 +43,24 @@ export function useAuth() {
   };
 
   const logout = async () => {
+    // Clear local state FIRST — before any network call
+    // This prevents any race condition where a redirect fires
+    // before the token is removed from localStorage
     const refreshToken = typeof window !== 'undefined'
       ? localStorage.getItem('refreshToken')
       : null;
-    try {
-      if (refreshToken) await authApi.logout(refreshToken);
-    } catch { /* silent */ }
-    localStorage.removeItem('refreshToken');
+
+    // Immediately clear everything — don't wait for API
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('refreshToken');
+    }
     dispatch(clearAuth());
+
+    // Fire-and-forget the server-side token revocation
+    if (refreshToken) {
+      authApi.logout(refreshToken).catch(() => null);
+    }
+
     router.replace('/login');
   };
 

@@ -1,0 +1,55 @@
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "null",
+    "path": [
+      "conversationId"
+    ],
+    "message": "Expected string, received null"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "null",
+    "path": [
+      "conversationId"
+    ],
+    "message": "Expected string, received null"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "null",
+    "path": [
+      "conversationId"
+    ],
+    "message": "Expected string, received null"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "null",
+    "path": [
+      "conversationId"
+    ],
+    "message": "Expected string, received null"
+  }
+]
+[
+  {
+    "code": "invalid_type",
+    "expected": "string",
+    "received": "null",
+    "path": [
+      "conversationId"
+    ],
+    "message": "Expected string, received null"
+  }
+]

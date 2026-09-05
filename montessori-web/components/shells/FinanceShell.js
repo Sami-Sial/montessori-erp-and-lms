@@ -1,121 +1,127 @@
 'use client';
-/**
- * Finance/HR Shell — Dense, data-table-first. Accent: Slate (#52607A).
- * Nav grammar: Fixed LEFT SIDEBAR (wide, with section grouping).
- * Deliberately calmer than Admin — finance screens read as "serious data".
- */
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, FileText, CreditCard, TrendingUp,
-  Users, Calendar, BarChart2, Package, Settings, LogOut,
+  LayoutDashboard, FileText, CreditCard, TrendingUp, BarChart2, Package, LogOut, MessageSquare,
 } from 'lucide-react';
-import { useSelector, useDispatch } from 'react-redux';
-import { clearAuth } from '../../store/authSlice';
+import { useSelector } from 'react-redux';
+import { useAuth } from '../../lib/hooks/useAuth';
 import NotificationBell from '../shared/NotificationBell';
+import GlobalAcademicYearSelector from '../shared/GlobalAcademicYearSelector';
 import useHasPermission from '../../lib/hooks/useHasPermission';
+import AIChatWidget from '../shared/AIChatWidget';
 
-const SECTIONS = [
-  {
-    label: 'Finance',
-    items: [
-      { href: '/finance/dashboard', label: 'Overview',     icon: LayoutDashboard, perm: 'finance:read' },
-      { href: '/finance/invoices',  label: 'Invoices',     icon: FileText,        perm: 'finance:read' },
-      { href: '/finance/payments',  label: 'Payments',     icon: CreditCard,      perm: 'finance:read' },
-      { href: '/finance/expenses',  label: 'Expenses',     icon: TrendingUp,      perm: 'finance:read' },
-      { href: '/finance/ledger',    label: 'Ledger',       icon: BarChart2,       perm: 'finance:read' },
-    ],
-  },
-  {
-    label: 'HR',
-    items: [
-      { href: '/finance/staff',     label: 'Staff',        icon: Users,           perm: 'hr:read' },
-      { href: '/finance/payroll',   label: 'Payroll',      icon: CreditCard,      perm: 'hr:read' },
-      { href: '/finance/leave',     label: 'Leave',        icon: Calendar,        perm: 'hr:read' },
-    ],
-  },
-  {
-    label: 'Inventory',
-    items: [
-      { href: '/finance/inventory', label: 'Inventory',    icon: Package,         perm: 'inventory:read' },
-    ],
-  },
+const NAV_ITEMS = [
+  { href: '/finance/dashboard', label: 'Overview',     icon: LayoutDashboard, perm: 'finance:read' },
+  { href: '/finance/invoices',  label: 'Finance Hub',  icon: FileText,        perm: 'finance:read' },
+  { href: '/finance/inventory', label: 'Inventory',    icon: Package,         perm: 'inventory:read' },
+  { href: '/finance/messages',  label: 'Messages',     icon: MessageSquare,   perm: 'message:send' },
 ];
 
 export default function FinanceShell({ children }) {
+  const [expanded, setExpanded] = useState(false);
   const pathname = usePathname();
-  const dispatch = useDispatch();
-  const router = useRouter();
   const { user } = useSelector((s) => s.auth);
+  const { logout } = useAuth();
+
+  const handleLogout = () => logout();
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg">
-      {/* ── Left sidebar ─────────────────────────────────────────────── */}
-      <nav className="w-52 bg-slate text-white flex flex-col shrink-0 overflow-y-auto">
+      {/* ── Nav Rail ─────────────────────────────────────────────────── */}
+      <nav
+        className={`flex flex-col bg-primary text-white transition-all duration-200 shrink-0 ${
+          expanded ? 'w-56' : 'w-16'
+        }`}
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
+      >
         {/* Logo */}
-        <div className="flex items-center gap-2 h-14 px-4 border-b border-white/10">
-          <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center font-display font-bold text-sm">
+        <div className="flex items-center h-16 px-3 border-b border-primary-light/30">
+          <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center font-display font-bold text-base shrink-0">
             M
           </div>
-          <span className="font-display font-semibold text-sm">Finance & HR</span>
+          {expanded && (
+            <span className="ml-3 font-display font-semibold text-sm truncate animate-fade-in">
+              Finance
+            </span>
+          )}
         </div>
 
-        {/* Nav sections */}
-        <div className="flex-1 py-4">
-          {SECTIONS.map((section) => (
-            <div key={section.label} className="mb-4">
-              <p className="px-4 text-xs font-medium text-white/40 uppercase tracking-wider mb-1">
-                {section.label}
-              </p>
-              {section.items.map((item) => (
-                <FinanceNavItem key={item.href} {...item} active={pathname.startsWith(item.href)} />
-              ))}
-            </div>
+        {/* Nav items */}
+        <div className="flex-1 py-3 space-y-0.5 overflow-y-auto">
+          {NAV_ITEMS.map((item) => (
+            <NavRailItem
+              key={item.href}
+              {...item}
+              expanded={expanded}
+              active={pathname.startsWith(item.href)}
+            />
           ))}
         </div>
 
-        {/* User */}
-        <div className="p-3 border-t border-white/10">
-          <p className="text-xs text-white/50 truncate px-1 mb-1">
-            {user?.firstName} {user?.lastName}
-          </p>
+        {/* User + logout */}
+        <div className="p-2 border-t border-primary-light/30">
+          {expanded && (
+            <p className="px-2 py-1 text-xs text-white/60 truncate">
+              {user?.firstName} {user?.lastName}
+            </p>
+          )}
           <button
-            onClick={() => { dispatch(clearAuth()); router.replace('/login'); }}
-            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-white/60 hover:text-white hover:bg-white/10 text-sm transition-colors"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors text-sm"
+            aria-label="Log out"
           >
-            <LogOut size={16} /> Log out
+            <LogOut size={18} className="shrink-0" />
+            {expanded && <span className="animate-fade-in">Log out</span>}
           </button>
         </div>
       </nav>
 
-      {/* ── Main ─────────────────────────────────────────────────────── */}
+      {/* ── Main area ────────────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
         <header className="h-14 bg-surface border-b border-border flex items-center justify-between px-6 shrink-0">
-          <p className="font-display font-semibold text-ink text-sm">
-            {SECTIONS.flatMap((s) => s.items).find((i) => pathname.startsWith(i.href))?.label ?? 'Finance & HR'}
-          </p>
-          <NotificationBell />
+          <h1 className="font-display font-semibold text-ink text-base">
+            {NAV_ITEMS.find((n) => pathname.startsWith(n.href))?.label ?? 'Finance'}
+          </h1>
+          <div className="flex items-center gap-3">
+            <GlobalAcademicYearSelector />
+            <NotificationBell />
+            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-sm">
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
+            </div>
+          </div>
         </header>
+
+        {/* Page content */}
         <main className="flex-1 overflow-y-auto p-6">
           {children}
         </main>
       </div>
+
+      <AIChatWidget />
     </div>
   );
 }
 
-function FinanceNavItem({ href, label, icon: Icon, active, perm }) {
+function NavRailItem({ href, label, icon: Icon, expanded, active, perm }) {
   const hasPermission = useHasPermission(perm);
   if (perm && !hasPermission) return null;
+
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2.5 mx-2 px-3 py-2 rounded-lg text-sm transition-colors focusable ${
-        active ? 'bg-white/20 text-white' : 'text-white/65 hover:bg-white/10 hover:text-white'
+      className={`flex items-center gap-3 mx-2 px-2 py-2.5 rounded-lg transition-colors text-sm focusable ${
+        active
+          ? 'bg-white/20 text-white'
+          : 'text-white/70 hover:bg-white/10 hover:text-white'
       }`}
+      aria-current={active ? 'page' : undefined}
     >
-      <Icon size={16} aria-hidden="true" />
-      {label}
+      <Icon size={18} className="shrink-0" aria-hidden="true" />
+      {expanded && <span className="truncate animate-fade-in">{label}</span>}
     </Link>
   );
 }

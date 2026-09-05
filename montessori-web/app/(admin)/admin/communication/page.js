@@ -74,7 +74,6 @@ export default function CommunicationPage() {
 
   const tabs = [
     { key: 'announcements', label: 'Announcements', icon: Megaphone },
-    { key: 'messages',      label: 'Messages',      icon: MessageSquare },
     { key: 'notifications', label: 'Notifications', icon: Bell },
   ];
 
@@ -167,29 +166,7 @@ export default function CommunicationPage() {
         </div>
       )}
 
-      {/* Messages */}
-      {tab === 'messages' && (
-        <div className="space-y-2">
-          {loadingMsgs ? <SkeletonCard /> : messages?.data?.length === 0 ? (
-            <div className="card text-center py-10 text-muted text-sm">No messages</div>
-          ) : messages?.data?.map((msg) => (
-            <div key={msg.id} className={`card flex items-start gap-3 ${msg.status !== 'READ' ? 'border-primary/20 bg-primary/5' : ''}`}>
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold shrink-0" aria-hidden="true">
-                {msg.sender?.firstName?.[0]}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-medium text-ink text-sm">{msg.sender?.firstName} {msg.sender?.lastName}</p>
-                  <p className="text-xs text-muted shrink-0">{formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}</p>
-                </div>
-                {msg.subject && <p className="text-xs font-medium text-muted">{msg.subject}</p>}
-                <p className="text-sm text-muted mt-0.5 line-clamp-2">{msg.body}</p>
-              </div>
-              {msg.status !== 'READ' && <div className="w-2 h-2 rounded-full bg-primary mt-2 shrink-0" aria-label="Unread" />}
-            </div>
-          ))}
-        </div>
-      )}
+
 
       {/* Notifications center */}
       {tab === 'notifications' && (

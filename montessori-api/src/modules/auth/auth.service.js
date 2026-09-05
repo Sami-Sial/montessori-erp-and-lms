@@ -56,7 +56,6 @@ const buildAuthResponse = async (user, { deviceInfo, ipAddress } = {}) => {
       lastName: user.lastName,
       avatarUrl: user.avatarUrl,
       organizationId: user.organizationId,
-      branchId: user.branchId,
       roles,
       permissions,
     },
@@ -109,7 +108,6 @@ export const registerOrganization = async (data, meta = {}) => {
     const user = await tx.user.create({
       data: {
         organizationId: org.id,
-        branchId: branch.id,
         email,
         passwordHash,
         firstName,
@@ -196,7 +194,6 @@ export const refreshAccessToken = async (plain, meta = {}) => {
       lastName: user.lastName,
       avatarUrl: user.avatarUrl,
       organizationId: user.organizationId,
-      branchId: user.branchId,
       roles,
       permissions,
     },
@@ -343,7 +340,6 @@ export const inviteUser = async (invitedByUser, { email, roleId, branchId, first
       invitedByUserId: invitedByUser.id,
       email,
       roleId,
-      branchId: branchId ?? null,
       token,
       expiresAt,
     },
@@ -393,7 +389,6 @@ export const acceptInvite = async ({ token, firstName, lastName, password }, met
     const user = await tx.user.create({
       data: {
         organizationId: invitation.organizationId,
-        branchId: invitation.branchId ?? null,
         email: invitation.email,
         passwordHash,
         firstName,
@@ -432,7 +427,6 @@ export const getMe = async (userId) => {
       phone: true,
       isEmailVerified: true,
       organizationId: true,
-      branchId: true,
       locale: true,
       lastLoginAt: true,
       createdAt: true,

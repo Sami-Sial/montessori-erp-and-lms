@@ -8,6 +8,7 @@ export const communicationApi = {
   deleteAnnouncement:         (id)        => api.delete(`/communication/announcements/${id}`),
 
   // Messages
+  getRecipients:              ()          => api.get('/communication/recipients'),
   getMessages:                (params)    => api.get('/communication/messages', params),
   sendMessage:                (data)      => api.post('/communication/messages', data),
   markMessageRead:            (id)        => api.patch(`/communication/messages/${id}/read`),

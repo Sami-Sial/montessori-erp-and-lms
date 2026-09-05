@@ -95,6 +95,30 @@ router.post(
 
 /**
  * @openapi
+ * /attendance/daily:
+ *   get:
+ *     summary: Get today's (or a specific date's) attendance roster for a classroom or entire school
+ *     tags: [Attendance]
+ */
+router.get(
+  '/daily',
+  requirePermission('attendance:read'),
+  async (req, res, next) => {
+    try {
+      const result = await attendanceService.getClassroomAttendance({
+        classroomId: req.query.classroomId,
+        date: req.query.date,
+        organizationId: req.organizationId,
+      });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * @openapi
  * /attendance/classroom/{classroomId}:
  *   get:
  *     summary: Get today's (or a specific date's) attendance roster for a classroom
@@ -155,11 +179,64 @@ router.get(
   async (req, res, next) => {
     try {
       const now = new Date();
+      const branchId = req.query.branchId === 'ALL' ? undefined : req.query.branchId;
       const result = await attendanceService.getAttendanceAnalytics({
         organizationId: req.organizationId,
         classroomId: req.query.classroomId,
         month: parseInt(req.query.month ?? now.getMonth() + 1),
         year: parseInt(req.query.year ?? now.getFullYear()),
+      });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * @openapi
+ * /attendance/trend:
+ *   get:
+ *     summary: Get attendance trend across months
+ *     tags: [Attendance]
+ */
+router.get(
+  '/trend',
+  requirePermission('attendance:read'),
+  async (req, res, next) => {
+    try {
+      const branchId = req.query.branchId === 'ALL' ? undefined : req.query.branchId;
+      const result = await attendanceService.getAttendanceTrend({
+        organizationId: req.organizationId,
+        academicYearId: req.query.academicYearId,
+      });
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+
+/**
+ * @openapi
+ * /attendance/history:
+ *   get:
+ *     summary: Get attendance history (paginated)
+ *     tags: [Attendance]
+ */
+router.get(
+  '/history',
+  requirePermission('attendance:read'),
+  async (req, res, next) => {
+    try {
+      const result = await attendanceService.getAttendanceHistory({
+        organizationId: req.organizationId,
+        classroomId: req.query.classroomId,
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+        skip: req.query.skip,
+        take: req.query.take,
       });
       res.json(result);
     } catch (err) {

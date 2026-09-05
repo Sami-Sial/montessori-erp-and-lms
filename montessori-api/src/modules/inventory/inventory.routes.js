@@ -37,7 +37,6 @@ router.get(
   '/items',
   requirePermission('inventory:read'),
   validateQuery(paginationSchema.extend({
-    branchId:   z.string().uuid().optional(),
     categoryId: z.string().uuid().optional(),
     lowStock:   z.coerce.boolean().optional(),
     inClassroomUse: z.coerce.boolean().optional(),
@@ -333,7 +332,6 @@ router.post(
           data: {
             organizationId: req.organizationId,
             supplierId,
-            branchId: branchId ?? null,
             orderNumber,
             status: 'SUBMITTED',
             orderDate: orderDate ? new Date(orderDate) : new Date(),

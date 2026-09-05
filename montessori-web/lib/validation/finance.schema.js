@@ -37,7 +37,6 @@ export const paymentCreateSchema = z.object({
 });
 
 export const expenseSchema = z.object({
-  branchId:    z.string().uuid().optional().nullable(),
   category:    z.enum(['SALARY','UTILITIES','SUPPLIES','MAINTENANCE','MARKETING','RENT','INSURANCE','TRANSPORT','OTHER']),
   description: z.string().min(1).max(255),
   amount:      z.coerce.number().positive(),

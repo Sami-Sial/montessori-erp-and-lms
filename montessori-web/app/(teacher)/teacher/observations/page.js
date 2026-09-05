@@ -116,119 +116,125 @@ export default function TeacherObservationsPage() {
         </button>
       </div>
 
-      {/* Observation form */}
+      {/* Observation form Modal */}
       {showForm && (
-        <div className="card border-primary/30 space-y-4 animate-slide-up">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-ink">New Observation</h2>
-            <button onClick={() => { setShowForm(false); setAiSuggestion(null); setPhotoPreview(null); reset(); }}
-              className="text-muted hover:text-ink focusable" aria-label="Close form">
-              <X size={18} />
-            </button>
-          </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50 ">
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto max-h-[90vh] p-6 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <h2 className="font-display text-xl font-bold text-ink">Log Observation</h2>
+              <button onClick={() => { setShowForm(false); setAiSuggestion(null); setPhotoPreview(null); reset(); }}
+                className="p-1.5 text-muted hover:text-ink hover:bg-bg rounded-lg focusable transition-colors" aria-label="Close form">
+                <X size={20} />
+              </button>
+            </div>
 
-          {/* Photo upload with AI tagging */}
-          <div className="rounded-lg border-2 border-dashed border-border p-4 text-center relative">
-            {photoPreview ? (
-              <div className="relative">
-                <img src={photoPreview} alt="Observation" className="w-full max-h-40 object-contain rounded-lg" />
-                {aiSuggesting && (
-                  <div className="absolute inset-0 bg-surface/80 rounded-lg flex items-center justify-center gap-2">
-                    <Sparkles size={16} className="text-primary animate-pulse" />
-                    <span className="text-sm text-primary font-medium">AI analysing…</span>
+            {/* Photo upload with AI tagging */}
+            <div className="rounded-xl border-2 border-dashed border-border bg-bg/50 p-6 text-center relative hover:border-primary/50 transition-colors">
+              {photoPreview ? (
+                <div className="relative">
+                  <img src={photoPreview} alt="Observation" className="w-full max-h-48 object-contain rounded-lg" />
+                  {aiSuggesting && (
+                    <div className="absolute inset-0 bg-surface/80 rounded-lg flex items-center justify-center gap-2">
+                      <Sparkles size={16} className="text-primary animate-pulse" />
+                      <span className="text-sm text-primary font-bold tracking-wide">AI analyzing photo…</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <label className="cursor-pointer flex flex-col items-center gap-3 text-muted hover:text-primary transition-colors">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Camera size={24} className="text-primary" />
                   </div>
-                )}
+                  <div>
+                    <span className="text-sm font-bold block text-ink">{t('observations.addPhoto')}</span>
+                    <span className="text-xs text-primary font-medium mt-1">AI will automatically suggest area & milestone</span>
+                  </div>
+                  <input type="file" accept="image/*" className="sr-only" onChange={handlePhotoAiSuggest} aria-label="Upload observation photo" />
+                </label>
+              )}
+            </div>
+
+            {aiSuggestion && (
+              <div className="flex items-start gap-2 rounded-xl bg-primary/10 border border-primary/20 p-4 shadow-inner">
+                <Sparkles size={16} className="text-primary mt-0.5 shrink-0" />
+                <p className="text-xs font-semibold text-primary/90 leading-relaxed">{aiSuggestion.reasoning} <span className="opacity-75">(confidence: {Math.round((aiSuggestion.confidence ?? 0) * 100)}%)</span></p>
               </div>
-            ) : (
-              <label className="cursor-pointer flex flex-col items-center gap-2 text-muted hover:text-ink transition-colors">
-                <Camera size={24} />
-                <span className="text-sm">{t('observations.addPhoto')}</span>
-                <span className="text-xs text-primary">AI will suggest area & milestone</span>
-                <input type="file" accept="image/*" className="sr-only" onChange={handlePhotoAiSuggest} aria-label="Upload observation photo" />
-              </label>
             )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-ink mb-1.5">Student <span className="text-red-500">*</span></label>
+                  <select {...register('studentId')} className={`w-full px-3.5 py-2.5 rounded-xl border text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none shadow-sm ${errors.studentId ? 'border-danger' : 'border-border'}`}>
+                    <option value="" disabled>Select student</option>
+                    {students?.data?.map((s) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
+                  </select>
+                  {errors.studentId && <p className="text-xs text-danger mt-1 font-medium">{errors.studentId.message}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-ink mb-1.5">Curriculum Area <span className="text-red-500">*</span></label>
+                  <select {...register('curriculumAreaId')} onChange={(e) => { register('curriculumAreaId').onChange(e); setSelectedArea(e.target.value); }}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none shadow-sm ${errors.curriculumAreaId ? 'border-danger' : 'border-border'}`}>
+                    <option value="" disabled>Select area</option>
+                    {allAreas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                  {errors.curriculumAreaId && <p className="text-xs text-danger mt-1 font-medium">{errors.curriculumAreaId.message}</p>}
+                </div>
+              </div>
+
+              {/* Milestone */}
+              {currentArea?.milestones?.length > 0 && (
+                <div>
+                  <label className="block text-xs font-bold text-ink mb-1.5">Milestone <span className="text-muted font-normal">(optional)</span></label>
+                  <select {...register('milestoneId')} className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-surface text-sm focus:ring-2 focus:ring-primary focus:outline-none shadow-sm">
+                    <option value="">None</option>
+                    {currentArea.milestones.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {/* Note */}
+              <div>
+                <label className="block text-xs font-bold text-ink mb-1.5">Observation Note <span className="text-red-500">*</span></label>
+                <textarea {...register('note')} rows={3}
+                  placeholder="Describe what you observed in objective language…"
+                  className={`w-full px-3.5 py-3 rounded-xl border text-sm bg-surface focus:ring-2 focus:ring-primary focus:outline-none resize-none shadow-sm ${errors.note ? 'border-danger' : 'border-border'}`} />
+                {errors.note && <p className="text-xs text-danger mt-1 font-medium">{errors.note.message}</p>}
+              </div>
+
+              {/* Mastery level */}
+              <div>
+                <label className="block text-xs font-bold text-ink mb-2">{t('observations.masteryLevel')}</label>
+                <div className="flex flex-wrap gap-2">
+                  {MASTERY_LEVELS.map((level) => {
+                    const current = watch('masteryLevel');
+                    return (
+                      <button key={level} type="button"
+                        onClick={() => setValue('masteryLevel', level)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all focusable ${
+                          current === level ? MASTERY_COLORS[level] + ' border-current shadow-sm' : 'border-border bg-bg text-muted hover:border-muted hover:bg-surface'
+                        }`}
+                        aria-pressed={current === level}>
+                        {level.replace(/_/g, ' ')}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
+                <button type="button" onClick={() => { setShowForm(false); reset(); setAiSuggestion(null); setPhotoPreview(null); }}
+                  className="px-5 py-2.5 rounded-xl border border-border text-sm font-bold text-muted hover:text-ink hover:bg-bg focusable transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" disabled={isSubmitting}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary-dark disabled:opacity-50 focusable shadow-sm transition-colors">
+                  {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+                  Save Observation
+                </button>
+              </div>
+            </form>
           </div>
-
-          {aiSuggestion && (
-            <div className="flex items-start gap-2 rounded-lg bg-primary/5 border border-primary/20 p-3">
-              <Sparkles size={14} className="text-primary mt-0.5 shrink-0" />
-              <p className="text-xs text-primary">{aiSuggestion.reasoning} (confidence: {Math.round((aiSuggestion.confidence ?? 0) * 100)}%)</p>
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-            <div className="grid md:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-muted mb-1">Student *</label>
-                <select {...register('studentId')} className={`w-full px-3 py-2 rounded-lg border text-sm bg-bg focus:ring-2 focus:ring-primary focus:outline-none ${errors.studentId ? 'border-danger' : 'border-border'}`}>
-                  <option value="">Select student</option>
-                  {students?.data?.map((s) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
-                </select>
-                {errors.studentId && <p className="text-xs text-danger mt-1">{errors.studentId.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-muted mb-1">Curriculum area *</label>
-                <select {...register('curriculumAreaId')} onChange={(e) => { register('curriculumAreaId').onChange(e); setSelectedArea(e.target.value); }}
-                  className={`w-full px-3 py-2 rounded-lg border text-sm bg-bg focus:ring-2 focus:ring-primary focus:outline-none ${errors.curriculumAreaId ? 'border-danger' : 'border-border'}`}>
-                  <option value="">Select area</option>
-                  {allAreas.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-                {errors.curriculumAreaId && <p className="text-xs text-danger mt-1">{errors.curriculumAreaId.message}</p>}
-              </div>
-            </div>
-
-            {/* Milestone */}
-            {currentArea?.milestones?.length > 0 && (
-              <div>
-                <label className="block text-xs font-medium text-muted mb-1">Milestone (optional)</label>
-                <select {...register('milestoneId')} className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:ring-2 focus:ring-primary focus:outline-none">
-                  <option value="">None</option>
-                  {currentArea.milestones.map((m) => <option key={m.id} value={m.id}>{m.title}</option>)}
-                </select>
-              </div>
-            )}
-
-            {/* Note */}
-            <div>
-              <label className="block text-xs font-medium text-muted mb-1">Observation note *</label>
-              <textarea {...register('note')} rows={3}
-                placeholder="Describe what you observed in objective language…"
-                className={`w-full px-3 py-2 rounded-lg border text-sm bg-bg focus:ring-2 focus:ring-primary focus:outline-none resize-none ${errors.note ? 'border-danger' : 'border-border'}`} />
-              {errors.note && <p className="text-xs text-danger mt-1">{errors.note.message}</p>}
-            </div>
-
-            {/* Mastery level */}
-            <div>
-              <label className="block text-xs font-medium text-muted mb-2">{t('observations.masteryLevel')}</label>
-              <div className="flex flex-wrap gap-2">
-                {MASTERY_LEVELS.map((level) => {
-                  const current = watch('masteryLevel');
-                  return (
-                    <button key={level} type="button"
-                      onClick={() => setValue('masteryLevel', level)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all focusable ${
-                        current === level ? MASTERY_COLORS[level] + ' border-current' : 'border-border bg-bg text-muted hover:border-muted'
-                      }`}
-                      aria-pressed={current === level}>
-                      {level.replace(/_/g, ' ')}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <button type="submit" disabled={isSubmitting}
-                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark disabled:opacity-50 focusable">
-                {isSubmitting && <Loader2 size={14} className="animate-spin" />}
-                Save observation
-              </button>
-              <button type="button" onClick={() => { setShowForm(false); reset(); setAiSuggestion(null); setPhotoPreview(null); }}
-                className="px-4 py-2 rounded-lg border border-border text-sm text-muted hover:text-ink focusable">
-                Cancel
-              </button>
-            </div>
-          </form>
         </div>
       )}
 

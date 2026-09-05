@@ -90,6 +90,32 @@ router.get('/invoices/:id', requirePermission('finance:read'), async (req, res, 
   } catch (err) { next(err); }
 });
 
+// Send reminder notification to parent for an overdue invoice
+router.post('/invoices/:id/remind', requirePermission('finance:write'), async (req, res, next) => {
+  try {
+    const invoice = await financeService.getInvoiceById(req.params.id, req.organizationId);
+    // Create an in-app notification for all guardians of the student
+    const guardians = await prisma.studentGuardian.findMany({
+      where: { studentId: invoice.studentId },
+      include: { guardian: { select: { id: true } } },
+    });
+    if (guardians.length > 0) {
+      await prisma.notification.createMany({
+        data: guardians.map(g => ({
+          organizationId: req.organizationId,
+          userId: g.guardian.id,
+          type: 'FINANCE_ALERT',
+          title: 'Payment Reminder',
+          body: `Invoice ${invoice.invoiceNumber} for $${Number(invoice.totalAmount).toFixed(2)} is overdue. Please log in to make a payment.`,
+          data: { invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
+        })),
+        skipDuplicates: true,
+      });
+    }
+    res.json({ success: true, notified: guardians.length });
+  } catch (err) { next(err); }
+});
+
 /**
  * @openapi
  * /finance/invoices:
@@ -97,6 +123,21 @@ router.get('/invoices/:id', requirePermission('finance:read'), async (req, res, 
  *     summary: Create and issue an invoice
  *     tags: [Finance]
  */
+router.post(
+  '/invoices/batch',
+  requirePermission('finance:write'),
+  validate(z.object({
+    classroomId: z.string().uuid().optional().nullable(),
+    feeStructureId: z.string().uuid(),
+    dueDate: z.coerce.date(),
+  })),
+  async (req, res, next) => {
+    try {
+      res.status(201).json(await financeService.createBatchInvoices(req.organizationId, req.body, req.user.sub));
+    } catch (err) { next(err); }
+  }
+);
+
 router.post(
   '/invoices',
   requirePermission('finance:write'),
@@ -110,13 +151,17 @@ router.post(
 
 // ─── Payments ─────────────────────────────────────────────────────────────────
 
-/**
- * @openapi
- * /finance/payments:
- *   post:
- *     summary: Record a payment against an invoice
- *     tags: [Finance]
- */
+router.get(
+  '/payments',
+  requirePermission('finance:read'),
+  validateQuery(paginationSchema),
+  async (req, res, next) => {
+    try {
+      res.json(await financeService.listPayments({ organizationId: req.organizationId, ...req.query }));
+    } catch (err) { next(err); }
+  }
+);
+
 router.post(
   '/payments',
   requirePermission('finance:write'),
@@ -176,8 +221,84 @@ router.post('/expenses', requirePermission('finance:write'), validate(expenseSch
  */
 router.get('/summary', requirePermission('finance:read'), async (req, res, next) => {
   try {
-    res.json(await financeService.getFinanceSummary(req.organizationId));
+    const { academicYearId } = req.query;
+    res.json(await financeService.getFinanceSummary({
+      organizationId: req.organizationId,
+      academicYearId
+    }));
   } catch (err) { next(err); }
+});
+
+/**
+ * @openapi
+ * /finance/analytics:
+ *   get:
+ *     summary: Finance analytics for charts
+ *     tags: [Finance]
+ */
+router.get('/analytics', requirePermission('finance:read'), async (req, res, next) => {
+  try {
+    const { academicYearId } = req.query;
+    res.json(await financeService.getFinanceAnalytics({
+      organizationId: req.organizationId,
+      academicYearId
+    }));
+  } catch (err) { next(err); }
+});
+
+// ─── Stripe Checkout ──────────────────────────────────────────────────────────
+
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder', {
+  apiVersion: '2024-06-20',
+});
+
+/**
+ * @openapi
+ * /finance/invoices/{id}/checkout:
+ *   post:
+ *     summary: Create a Stripe Checkout session for an invoice
+ *     tags: [Finance]
+ */
+router.post('/invoices/:id/checkout', authenticate, scopeTenant, async (req, res, next) => {
+  try {
+    const invoice = await financeService.getInvoiceById(req.params.id, req.organizationId);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found' });
+
+    const outstanding = Number(invoice.totalAmount) - Number(invoice.paidAmount);
+    if (outstanding <= 0) return res.status(400).json({ error: 'Invoice is already paid' });
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: invoice.currency?.toLowerCase() || 'usd',
+            product_data: {
+              name: `Invoice ${invoice.invoiceNumber}`,
+              description: `Payment for ${invoice.student?.firstName ?? ''} ${invoice.student?.lastName ?? ''}`.trim(),
+            },
+            unit_amount: Math.round(outstanding * 100), // cents
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: {
+        invoiceId: invoice.id,
+        organizationId: req.organizationId,
+      },
+      success_url: `${frontendUrl}/parent/billing?status=success&invoice=${invoice.invoiceNumber}`,
+      cancel_url: `${frontendUrl}/parent/billing?status=cancelled`,
+    });
+
+    res.json({ checkoutUrl: session.url });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // ─── Ledger ───────────────────────────────────────────────────────────────────

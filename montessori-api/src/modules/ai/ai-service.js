@@ -380,7 +380,7 @@ export const chat = async ({ conversationId, message, user, context = {} }) => {
       tools: TOOLS,
       tool_choice: 'auto',
       temperature: 0.7,
-      max_tokens: 1024,
+      max_tokens: 800,
     });
 
     const choice = response.choices[0];

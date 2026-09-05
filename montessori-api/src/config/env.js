@@ -26,7 +26,7 @@ export const env = {
   // JWT
   JWT_ACCESS_SECRET: required('JWT_ACCESS_SECRET'),
   JWT_REFRESH_SECRET: required('JWT_REFRESH_SECRET'),
-  JWT_ACCESS_EXPIRY: optional('JWT_ACCESS_EXPIRY', '15m'),
+  JWT_ACCESS_EXPIRY: optional('JWT_ACCESS_EXPIRY', '7d'),
   JWT_REFRESH_EXPIRY: optional('JWT_REFRESH_EXPIRY', '7d'),
 
   // Email

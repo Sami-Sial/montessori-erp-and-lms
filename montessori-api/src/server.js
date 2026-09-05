@@ -23,12 +23,16 @@ import attendanceRoutes from './modules/attendance/attendance.routes.js';
 import curriculumRoutes from './modules/curriculum/curriculum.routes.js';
 import observationRoutes from './modules/observations/observation.routes.js';
 import financeRoutes from './modules/finance/finance.routes.js';
+import { handleStripeWebhook } from './modules/finance/stripe.webhook.js';
 import hrRoutes from './modules/hr/hr.routes.js';
 import inventoryRoutes from './modules/inventory/inventory.routes.js';
 import communicationRoutes from './modules/communication/communication.routes.js';
 import gamificationRoutes from './modules/gamification/gamification.routes.js';
 import aiRoutes from './modules/ai/ai.routes.js';
 import syncRoutes from './modules/sync/sync.routes.js';
+import adminRoutes from './modules/admin/admin.routes.js';
+import academicYearRoutes from './modules/academic-years/academic-year.routes.js';
+import publicRoutes from './modules/public/public.routes.js';
 
 // ─── Swagger ──────────────────────────────────────────────────────────────────
 import swaggerUi from 'swagger-ui-express';
@@ -74,6 +78,9 @@ app.use(
   })
 );
 
+// Stripe webhook must be parsed as raw body (before express.json)
+app.post('/api/v1/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan(env.isDev ? 'dev' : 'combined'));
@@ -100,6 +107,9 @@ app.use(`${API}/communication`, communicationRoutes);
 app.use(`${API}/gamification`, gamificationRoutes);
 app.use(`${API}/ai`, aiRoutes);
 app.use(`${API}/sync`, syncRoutes);
+app.use(`${API}/admin`, adminRoutes);
+app.use(`${API}/academic-years`, academicYearRoutes);
+app.use(`${API}/public`, publicRoutes);
 
 // ─── Swagger UI ───────────────────────────────────────────────────────────────
 app.use(

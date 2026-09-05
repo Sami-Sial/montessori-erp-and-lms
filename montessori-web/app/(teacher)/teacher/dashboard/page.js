@@ -13,13 +13,16 @@ import { useSyncManager } from '../../../../lib/hooks/useSyncManager';
 import { format, formatDistanceToNow } from 'date-fns';
 
 function QuickAction({ href, icon: Icon, label, color }) {
+  const bg = color.replace('text-', 'bg-') + '/10';
   return (
-    <Link href={href}
-      className={`card flex flex-col items-center gap-2 py-5 hover:shadow-md transition-all text-center group ${color}`}>
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-current/10 group-hover:scale-110 transition-transform">
-        <Icon size={20} aria-hidden="true" />
+    <Link href={href} className="stat-card group hover:shadow-md transition-shadow cursor-pointer block">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-muted uppercase tracking-wide">{label}</p>
+        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color} ${bg}`}>
+          <Icon size={16} aria-hidden="true" />
+        </div>
       </div>
-      <span className="text-sm font-medium">{label}</span>
+      <p className="text-sm font-medium text-ink mt-4 group-hover:text-primary transition-colors">Go to {label} →</p>
     </Link>
   );
 }
@@ -58,30 +61,32 @@ export default function TeacherDashboard() {
   const greeting = now.getHours() < 12 ? 'Good morning' : now.getHours() < 17 ? 'Good afternoon' : 'Good evening';
 
   return (
-    <div className="space-y-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">
-          {greeting}, {user?.firstName} 👋
-        </h1>
-        <p className="text-muted text-sm mt-0.5">
-          {format(now, 'EEEE, MMMM d')} · {primaryClassroom?.name ?? 'No classroom assigned'}
-        </p>
+    <div className="space-y-8 pb-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-ink">
+            {greeting}, {user?.firstName} 👋
+          </h1>
+          <p className="text-muted text-sm mt-1">
+            {format(now, 'EEEE, MMMM d')} — {primaryClassroom?.name ?? 'No classroom assigned'}
+          </p>
+        </div>
       </div>
 
-      {/* Quick actions — tablet-friendly large targets */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Quick actions */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <QuickAction href="/teacher/attendance" icon={ClipboardCheck} label={t('attendance.markAttendance')} color="text-secondary" />
         <QuickAction href="/teacher/observations" icon={Eye} label={t('observations.logObservation')} color="text-primary" />
         <QuickAction href="/teacher/curriculum" icon={BookOpen} label={t('curriculum.lessonPlans')} color="text-info" />
-        <QuickAction href="/teacher/students" icon={Users} label={t('students.title')} color="text-accent" />
+        <QuickAction href="/teacher/students" icon={Users} label={t('students.title')} color="text-success" />
       </div>
 
       {/* Today's attendance summary */}
-      <section className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-semibold text-ink flex items-center gap-2">
-            <ClipboardCheck size={16} className="text-secondary" aria-hidden="true" />
+      <section className="card p-6 border-secondary/20">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="font-display font-semibold text-lg text-ink flex items-center gap-2">
+            <ClipboardCheck size={18} className="text-secondary" aria-hidden="true" />
             Today's Attendance
           </h2>
           <Link href="/teacher/attendance" className="text-xs text-secondary hover:underline focusable flex items-center gap-1">
@@ -124,9 +129,9 @@ export default function TeacherDashboard() {
 
       {/* Recent observations */}
       <section>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-ink flex items-center gap-2">
-            <Eye size={16} className="text-primary" aria-hidden="true" />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display font-semibold text-lg text-ink flex items-center gap-2">
+            <Eye size={18} className="text-primary" aria-hidden="true" />
             Recent Observations
           </h2>
           <Link href="/teacher/observations" className="text-xs text-primary hover:underline focusable flex items-center gap-1">

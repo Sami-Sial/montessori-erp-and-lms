@@ -102,7 +102,7 @@ export const scopeTenant = (req, res, next) => {
 
   // Derive from JWT — never trust client input
   req.organizationId = req.user.organizationId ?? null;
-  req.branchId = req.user.branchId ?? null;
+  req.branchId = undefined ?? null;
   next();
 };
 

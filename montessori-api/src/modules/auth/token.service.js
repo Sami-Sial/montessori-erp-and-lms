@@ -16,7 +16,6 @@ export const signAccessToken = (user, roles, permissions) => {
       sub: user.id,
       email: user.email,
       organizationId: user.organizationId ?? null,
-      branchId: user.branchId ?? null,
       roles,       // string[] e.g. ["TEACHER"]
       permissions, // string[] e.g. ["attendance:mark", "student:read"]
     },

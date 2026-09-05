@@ -16,7 +16,7 @@
  *  principal@sunrise.edu    — ORG_ADMIN
  *  branchadmin@sunrise.edu  — BRANCH_ADMIN
  *  teacher@sunrise.edu      — TEACHER
- *  guide@sunrise.edu        — GUIDE
+ *  removedGuide@sunrise.edu        — REMOVED_GUIDE
  *  finance@sunrise.edu      — FINANCE_STAFF
  *  hr@sunrise.edu           — HR_STAFF
  *  frontdesk@sunrise.edu    — FRONT_DESK
@@ -122,38 +122,7 @@ async function main() {
     },
   });
 
-  // ── 3. Branches ───────────────────────────────────────────────────────────────
-  console.log('  → Branches');
 
-  const mainBranch = await prisma.branch.upsert({
-    where: { organizationId_code: { organizationId: org.id, code: 'MAIN' } },
-    update: {},
-    create: {
-      id: uuid(),
-      organizationId: org.id,
-      name: 'Main Campus',
-      code: 'MAIN',
-      address: '123 Elm Street',
-      city: 'Austin',
-      phone: '+1-555-0101',
-      email: 'main@sunrise.edu',
-    },
-  });
-
-  await prisma.branch.upsert({
-    where: { organizationId_code: { organizationId: org.id, code: 'NORTH' } },
-    update: {},
-    create: {
-      id: uuid(),
-      organizationId: org.id,
-      name: 'North Campus',
-      code: 'NORTH',
-      address: '456 Oak Avenue',
-      city: 'Austin',
-      phone: '+1-555-0102',
-      email: 'north@sunrise.edu',
-    },
-  });
 
   // ── 4. Roles ──────────────────────────────────────────────────────────────────
   console.log('  → Roles & Permissions');
@@ -169,18 +138,12 @@ async function main() {
       name: 'ORG_ADMIN', displayName: 'School Principal', isSystem: true,
       perms: allKeys.filter((k) => k !== 'admin:org'),
     },
-    {
-      name: 'BRANCH_ADMIN', displayName: 'Branch Administrator', isSystem: true,
-      perms: ['student:read','student:write','attendance:read','attendance:mark','curriculum:read','curriculum:write','observation:read','observation:write','announcement:read','announcement:write','message:send','ai:chat','ai:insights','report:export','gamification:read','gamification:award'],
-    },
+
     {
       name: 'TEACHER', displayName: 'Teacher / Guide', isSystem: true,
       perms: ['student:read','attendance:read','attendance:mark','curriculum:read','curriculum:write','observation:read','observation:write','announcement:read','message:send','ai:chat','gamification:read','gamification:award'],
     },
-    {
-      name: 'GUIDE', displayName: 'Montessori Guide', isSystem: true,
-      perms: ['student:read','attendance:read','attendance:mark','curriculum:read','curriculum:write','observation:read','observation:write','announcement:read','message:send','ai:chat','gamification:read','gamification:award'],
-    },
+
     {
       name: 'PARENT', displayName: 'Parent / Guardian', isSystem: true,
       perms: ['student:read','attendance:read','observation:read','announcement:read','message:send','ai:chat','gamification:read'],
@@ -191,7 +154,7 @@ async function main() {
     },
     {
       name: 'FINANCE_STAFF', displayName: 'Finance Staff', isSystem: true,
-      perms: ['finance:read','finance:write','student:read','report:export','announcement:read'],
+      perms: ['finance:read','finance:write','student:read','report:export','announcement:read','hr:read','hr:write'],
     },
     {
       name: 'HR_STAFF', displayName: 'HR Staff', isSystem: true,
@@ -240,7 +203,7 @@ async function main() {
         data: {
           id: uuid(),
           organizationId: org.id,
-          branchId: branchId ?? mainBranch.id,
+          
           email,
           passwordHash: pw,
           firstName,
@@ -282,9 +245,7 @@ async function main() {
   });
 
   const orgAdminUser    = await upsertUser({ email: 'principal@sunrise.edu',   firstName: 'Diana',  lastName: 'Patel' },    'ORG_ADMIN');
-  const branchAdminUser = await upsertUser({ email: 'branchadmin@sunrise.edu', firstName: 'Marcus', lastName: 'Chen' },     'BRANCH_ADMIN');
   const teacherUser     = await upsertUser({ email: 'teacher@sunrise.edu',     firstName: 'Sarah',  lastName: 'Kowalski' }, 'TEACHER');
-  const guideUser       = await upsertUser({ email: 'guide@sunrise.edu',       firstName: 'Thomas', lastName: 'Reyes' },    'GUIDE');
   const financeUser     = await upsertUser({ email: 'finance@sunrise.edu',     firstName: 'Priya',  lastName: 'Sharma' },   'FINANCE_STAFF');
   const hrUser          = await upsertUser({ email: 'hr@sunrise.edu',          firstName: 'James',  lastName: 'OBrien' },   'HR_STAFF');
   const frontDeskUser   = await upsertUser({ email: 'frontdesk@sunrise.edu',   firstName: 'Lily',   lastName: 'Zhang' },    'FRONT_DESK');
@@ -301,14 +262,14 @@ async function main() {
   console.log('  → Academic Year');
 
   const academicYear = await prisma.academicYear.upsert({
-    where: { organizationId_name: { organizationId: org.id, name: '2024–2025' } },
+    where: { organizationId_name: { organizationId: org.id, name: '2026–2027' } },
     update: {},
     create: {
       id: uuid(),
       organizationId: org.id,
-      name: '2024–2025',
-      startDate: new Date('2024-08-26'),
-      endDate: new Date('2025-06-13'),
+      name: '2026–2027',
+      startDate: new Date('2026-08-25'),
+      endDate: new Date('2027-06-15'),
       isCurrent: true,
     },
   });
@@ -316,21 +277,28 @@ async function main() {
   // ── 7. Classrooms ─────────────────────────────────────────────────────────────
   console.log('  → Classrooms');
 
+  let seedlingsRoom = await prisma.classroom.findFirst({
+    where: { organizationId: org.id, name: 'Seedlings Room' },
+  });
+  if (!seedlingsRoom) {
+    seedlingsRoom = await prisma.classroom.create({
+      data: {
+        id: uuid(), organizationId: org.id, academicYearId: academicYear.id,
+        name: 'Seedlings Room', ageGroupMin: 1.5, ageGroupMax: 3.0,
+        capacity: 15, roomNumber: 'T1',
+      },
+    });
+  }
+
   let sunflowerRoom = await prisma.classroom.findFirst({
     where: { organizationId: org.id, name: 'Sunflower Room' },
   });
   if (!sunflowerRoom) {
     sunflowerRoom = await prisma.classroom.create({
       data: {
-        id: uuid(),
-        organizationId: org.id,
-        branchId: mainBranch.id,
-        academicYearId: academicYear.id,
-        name: 'Sunflower Room',
-        ageGroupMin: 3.0,
-        ageGroupMax: 6.0,
-        capacity: 20,
-        roomNumber: 'A1',
+        id: uuid(), organizationId: org.id, academicYearId: academicYear.id,
+        name: 'Sunflower Room', ageGroupMin: 3.0, ageGroupMax: 6.0,
+        capacity: 20, roomNumber: 'P1',
       },
     });
   }
@@ -341,15 +309,9 @@ async function main() {
   if (!oakRoom) {
     oakRoom = await prisma.classroom.create({
       data: {
-        id: uuid(),
-        organizationId: org.id,
-        branchId: mainBranch.id,
-        academicYearId: academicYear.id,
-        name: 'Oak Room',
-        ageGroupMin: 6.0,
-        ageGroupMax: 9.0,
-        capacity: 18,
-        roomNumber: 'B1',
+        id: uuid(), organizationId: org.id, academicYearId: academicYear.id,
+        name: 'Oak Room', ageGroupMin: 6.0, ageGroupMax: 9.0,
+        capacity: 18, roomNumber: 'LE1',
       },
     });
   }
@@ -363,7 +325,7 @@ async function main() {
     create: {
       id: uuid(),
       organizationId: org.id,
-      branchId: mainBranch.id,
+      
       userId: teacherUser.id,
       employeeNumber: 'EMP-001',
       jobTitle: 'Lead Teacher',
@@ -377,25 +339,7 @@ async function main() {
     },
   });
 
-  const guideStaff = await prisma.staff.upsert({
-    where: { userId: guideUser.id },
-    update: {},
-    create: {
-      id: uuid(),
-      organizationId: org.id,
-      branchId: mainBranch.id,
-      userId: guideUser.id,
-      employeeNumber: 'EMP-002',
-      jobTitle: 'Montessori Guide',
-      department: 'Primary',
-      employmentType: 'FULL_TIME',
-      startDate: new Date('2023-01-09'),
-      salary: 52000,
-      currency: 'USD',
-      qualifications: ['B.A. Early Childhood Education', 'AMS Credential'],
-      isActive: true,
-    },
-  });
+
 
   await prisma.classroomStaff.upsert({
     where: { classroomId_staffId: { classroomId: sunflowerRoom.id, staffId: teacherStaff.id } },
@@ -403,11 +347,7 @@ async function main() {
     create: { id: uuid(), classroomId: sunflowerRoom.id, staffId: teacherStaff.id, isPrimary: true },
   });
 
-  await prisma.classroomStaff.upsert({
-    where: { classroomId_staffId: { classroomId: oakRoom.id, staffId: guideStaff.id } },
-    update: {},
-    create: { id: uuid(), classroomId: oakRoom.id, staffId: guideStaff.id, isPrimary: true },
-  });
+
 
   // ── 9. Leave Requests ─────────────────────────────────────────────────────────
   console.log('  → Leave Requests (approved + pending)');
@@ -439,7 +379,7 @@ async function main() {
       data: {
         id: uuid(),
         organizationId: org.id,
-        staffId: guideStaff.id,
+        staffId: teacherStaff.id,
         leaveType: 'SICK',
         startDate: daysFromNow(3),
         endDate: daysFromNow(5),
@@ -454,33 +394,33 @@ async function main() {
   console.log('  → Payroll');
 
   await prisma.payroll.upsert({
-    where: { staffId_year_month: { staffId: teacherStaff.id, year: 2024, month: 10 } },
+    where: { staffId_year_month: { staffId: teacherStaff.id, year: 2026, month: 10 } },
     update: {},
     create: {
       id: uuid(),
       organizationId: org.id,
       staffId: teacherStaff.id,
       month: 10,
-      year: 2024,
+      year: 2026,
       baseSalary: 4583.33,
       allowances: 200.00,
       deductions: 550.00,
       netPay: 4233.33,
       currency: 'USD',
       status: 'PAID',
-      processedAt: new Date('2024-10-31'),
+      processedAt: new Date('2026-10-31'),
     },
   });
 
   await prisma.payroll.upsert({
-    where: { staffId_year_month: { staffId: guideStaff.id, year: 2024, month: 10 } },
+    where: { staffId_year_month: { staffId: teacherStaff.id, year: 2026, month: 10 } },
     update: {},
     create: {
       id: uuid(),
       organizationId: org.id,
-      staffId: guideStaff.id,
+      staffId: teacherStaff.id,
       month: 10,
-      year: 2024,
+      year: 2026,
       baseSalary: 4333.33,
       allowances: 150.00,
       deductions: 520.00,
@@ -493,41 +433,65 @@ async function main() {
   // ── 11. Curriculum & Milestones ───────────────────────────────────────────────
   console.log('  → Curriculum, Areas & Milestones');
 
-  let curriculum = await prisma.curriculum.findFirst({
-    where: { organizationId: org.id, name: 'AMI Primary 3–6' },
-  });
-  if (!curriculum) {
-    curriculum = await prisma.curriculum.create({
-      data: {
-        id: uuid(),
-        organizationId: org.id,
-        name: 'AMI Primary 3–6',
-        description: 'Authentic Montessori curriculum for ages 3–6',
-        isDefault: true,
-      },
-    });
-  }
-
-  const areaDefs = [
-    { name: 'Practical Life', colorHex: '#5C7A5A', iconName: 'broom',      sortOrder: 1 },
-    { name: 'Sensorial',      colorHex: '#E3A83D', iconName: 'eye',         sortOrder: 2 },
-    { name: 'Language',       colorHex: '#3E4C8C', iconName: 'book-open',   sortOrder: 3 },
-    { name: 'Mathematics',    colorHex: '#C1694F', iconName: 'calculator',  sortOrder: 4 },
-    { name: 'Culture',        colorHex: '#3E6FA8', iconName: 'globe',       sortOrder: 5 },
+  const curriculaDefs = [
+    { name: 'Toddler Community', targetAgeMin: 1.5, targetAgeMax: 3.0, 
+      areas: [{name: 'Practical Life', iconName: 'Hand', colorHex: '#4CAF50'}, {name: 'Sensorial', iconName: 'Eye', colorHex: '#FF9800'}, {name: 'Language', iconName: 'MessageCircle', colorHex: '#2196F3'}, {name: 'Motor Skills', iconName: 'Activity', colorHex: '#9C27B0'}] 
+    },
+    { name: "Children's House (Primary)", targetAgeMin: 3.0, targetAgeMax: 6.0, isDefault: true,
+      areas: [{name: 'Practical Life', iconName: 'Hand', colorHex: '#4CAF50'}, {name: 'Sensorial', iconName: 'Eye', colorHex: '#FF9800'}, {name: 'Language', iconName: 'MessageCircle', colorHex: '#2196F3'}, {name: 'Mathematics', iconName: 'Hash', colorHex: '#F44336'}, {name: 'Cultural Studies', iconName: 'Globe', colorHex: '#9C27B0'}]
+    },
+    { name: 'Lower Elementary', targetAgeMin: 6.0, targetAgeMax: 9.0,
+      areas: [{name: 'Mathematics', iconName: 'Hash', colorHex: '#F44336'}, {name: 'Geometry', iconName: 'Triangle', colorHex: '#E91E63'}, {name: 'Language', iconName: 'MessageCircle', colorHex: '#2196F3'}, {name: 'Biology', iconName: 'Leaf', colorHex: '#4CAF50'}, {name: 'Geography', iconName: 'Globe', colorHex: '#00BCD4'}, {name: 'History', iconName: 'Clock', colorHex: '#795548'}]
+    },
+    { name: 'Upper Elementary', targetAgeMin: 9.0, targetAgeMax: 12.0,
+      areas: [{name: 'Mathematics', iconName: 'Hash', colorHex: '#F44336'}, {name: 'Geometry', iconName: 'Triangle', colorHex: '#E91E63'}, {name: 'Language', iconName: 'MessageCircle', colorHex: '#2196F3'}, {name: 'Biology', iconName: 'Leaf', colorHex: '#4CAF50'}, {name: 'Geography', iconName: 'Globe', colorHex: '#00BCD4'}, {name: 'History', iconName: 'Clock', colorHex: '#795548'}]
+    },
+    { name: 'Adolescent', targetAgeMin: 12.0, targetAgeMax: 15.0,
+      areas: [{name: 'Occupations', iconName: 'Briefcase', colorHex: '#795548'}, {name: 'Humanities', iconName: 'Users', colorHex: '#9C27B0'}, {name: 'Sciences', iconName: 'Activity', colorHex: '#00BCD4'}, {name: 'Expression', iconName: 'Heart', colorHex: '#E91E63'}]
+    }
   ];
 
-  const areaMap = {};
-  for (const ad of areaDefs) {
-    let area = await prisma.curriculumArea.findFirst({
-      where: { curriculumId: curriculum.id, name: ad.name },
-    });
-    if (!area) {
-      area = await prisma.curriculumArea.create({
-        data: { id: uuid(), curriculumId: curriculum.id, ...ad },
+  const currMap = {};
+  for (const def of curriculaDefs) {
+    let curriculum = await prisma.curriculum.findFirst({ where: { organizationId: org.id, name: def.name } });
+    if (!curriculum) {
+      curriculum = await prisma.curriculum.create({
+        data: {
+          id: uuid(),
+          organizationId: org.id,
+          name: def.name,
+          targetAgeMin: def.targetAgeMin,
+          targetAgeMax: def.targetAgeMax,
+          isDefault: def.isDefault || false,
+        },
       });
     }
-    areaMap[ad.name] = area;
+    currMap[def.name] = curriculum;
+
+    for (let i = 0; i < def.areas.length; i++) {
+      const ad = def.areas[i];
+      let area = await prisma.curriculumArea.findFirst({
+        where: { curriculumId: curriculum.id, name: ad.name },
+      });
+      if (!area) {
+        area = await prisma.curriculumArea.create({
+          data: { id: uuid(), curriculumId: curriculum.id, ...ad, sortOrder: i },
+        });
+      }
+    }
   }
+
+  await prisma.classroom.update({ where: { id: seedlingsRoom.id }, data: { curriculumId: currMap['Toddler Community'].id } });
+  await prisma.classroom.update({ where: { id: sunflowerRoom.id }, data: { curriculumId: currMap["Children's House (Primary)"].id } });
+  await prisma.classroom.update({ where: { id: oakRoom.id }, data: { curriculumId: currMap['Lower Elementary'].id } });
+
+  const primaryCurr = currMap["Children's House (Primary)"];
+  const primaryAreas = await prisma.curriculumArea.findMany({ where: { curriculumId: primaryCurr.id } });
+  const areaMap = {};
+  for (const a of primaryAreas) {
+    areaMap[a.name] = a;
+  }
+  areaMap['Culture'] = areaMap['Cultural Studies'];
 
   const milestoneDefs = {
     'Practical Life': [
@@ -546,21 +510,17 @@ async function main() {
       { title: 'First reading — three-letter CVC', ageGroupMin: 4.5, ageGroupMax: 6.0, sortOrder: 3 },
     ],
     'Mathematics': [
-      { title: 'Number rods 1–10',                 ageGroupMin: 3.0, ageGroupMax: 4.0, sortOrder: 1 },
-      { title: 'Spindle box (concept of 0)',        ageGroupMin: 3.5, ageGroupMax: 4.5, sortOrder: 2 },
-      { title: 'Golden bead — introduction to 1000', ageGroupMin: 4.5, ageGroupMax: 6.0, sortOrder: 3 },
-    ],
-    'Culture': [
-      { title: 'Continent globe',                  ageGroupMin: 3.0, ageGroupMax: 4.5, sortOrder: 1 },
-      { title: 'Land and water forms',             ageGroupMin: 4.0, ageGroupMax: 5.5, sortOrder: 2 },
-      { title: 'Parts of a plant',                 ageGroupMin: 4.5, ageGroupMax: 6.0, sortOrder: 3 },
+      { title: 'Number rods & cards',              ageGroupMin: 3.5, ageGroupMax: 5.0, sortOrder: 1 },
+      { title: 'Spindle boxes',                    ageGroupMin: 4.0, ageGroupMax: 5.0, sortOrder: 2 },
+      { title: 'Golden beads — decimal system',    ageGroupMin: 4.5, ageGroupMax: 6.0, sortOrder: 3 },
     ],
   };
 
   const milestoneMap = {};
-  for (const [areaName, mds] of Object.entries(milestoneDefs)) {
+  for (const [areaName, mDefs] of Object.entries(milestoneDefs)) {
     milestoneMap[areaName] = [];
-    for (const md of mds) {
+    if (!areaMap[areaName]) continue;
+    for (const md of mDefs) {
       let m = await prisma.milestone.findFirst({
         where: { curriculumAreaId: areaMap[areaName].id, title: md.title },
       });
@@ -779,7 +739,7 @@ async function main() {
         classroomId: classroom.id,
         academicYearId: academicYear.id,
         status: 'ACTIVE',
-        enrolledAt: new Date('2024-08-26'),
+        enrolledAt: new Date('2026-08-25'),
       },
     });
   }
@@ -890,14 +850,20 @@ async function main() {
       [alexStudent, sunflowerRoom],
       [sofiaStudent, sunflowerRoom],
     ]) {
+      const enrollment = await prisma.enrollment.findFirst({
+        where: { studentId: student.id, classroomId: classroom.id, academicYearId: academicYear.id }
+      });
+      if (!enrollment) continue;
+
       // Sofia absent on day 4
       if (student.id === sofiaStudent.id && i === 4) {
         await prisma.attendanceRecord.upsert({
-          where: { studentId_date_checkType: { studentId: student.id, date, checkType: 'CHECK_IN' } },
+          where: { enrollmentId_date_checkType: { enrollmentId: enrollment.id, date, checkType: 'CHECK_IN' } },
           update: {},
           create: {
             id: uuid(),
             organizationId: org.id,
+            enrollmentId: enrollment.id,
             studentId: student.id,
             classroomId: classroom.id,
             date,
@@ -915,11 +881,12 @@ async function main() {
       const checkInOffset = isLate ? 35 * 60000 : 10 * 60000;
 
       await prisma.attendanceRecord.upsert({
-        where: { studentId_date_checkType: { studentId: student.id, date, checkType: 'CHECK_IN' } },
+        where: { enrollmentId_date_checkType: { enrollmentId: enrollment.id, date, checkType: 'CHECK_IN' } },
         update: {},
         create: {
           id: uuid(),
           organizationId: org.id,
+          enrollmentId: enrollment.id,
           studentId: student.id,
           classroomId: classroom.id,
           date,
@@ -978,6 +945,7 @@ async function main() {
         currency: 'USD',
         frequency: 'MONTHLY',
         isActive: true,
+        academicYearId: academicYear.id,
       },
     });
   }
@@ -996,21 +964,25 @@ async function main() {
         currency: 'USD',
         frequency: 'ANNUALLY',
         isActive: true,
+        academicYearId: academicYear.id,
       },
     });
   }
 
   // Paid invoice for Alex
   let paidInvoice = await prisma.invoice.findFirst({
-    where: { organizationId: org.id, invoiceNumber: 'INV-2024-001' },
+    where: { organizationId: org.id, invoiceNumber: 'INV-2026-001' },
   });
   if (!paidInvoice) {
+    const alexEnrollment = await prisma.enrollment.findFirst({ where: { studentId: alexStudent.id, academicYearId: academicYear.id } });
     paidInvoice = await prisma.invoice.create({
       data: {
         id: uuid(),
         organizationId: org.id,
         studentId: alexStudent.id,
-        invoiceNumber: 'INV-2024-001',
+        enrollmentId: alexEnrollment?.id,
+        academicYearId: academicYear.id,
+        invoiceNumber: 'INV-2026-001',
         issueDate: daysAgo(30),
         dueDate: daysAgo(15),
         totalAmount: 1200.00,
@@ -1046,15 +1018,18 @@ async function main() {
 
   // OVERDUE invoice for Sofia — edge case
   let overdueInvoice = await prisma.invoice.findFirst({
-    where: { organizationId: org.id, invoiceNumber: 'INV-2024-002' },
+    where: { organizationId: org.id, invoiceNumber: 'INV-2026-002' },
   });
   if (!overdueInvoice) {
+    const sofiaEnrollment = await prisma.enrollment.findFirst({ where: { studentId: sofiaStudent.id, academicYearId: academicYear.id } });
     overdueInvoice = await prisma.invoice.create({
       data: {
         id: uuid(),
         organizationId: org.id,
         studentId: sofiaStudent.id,
-        invoiceNumber: 'INV-2024-002',
+        enrollmentId: sofiaEnrollment?.id,
+        academicYearId: academicYear.id,
+        invoiceNumber: 'INV-2026-002',
         issueDate: daysAgo(45),
         dueDate: daysAgo(15),
         totalAmount: 1550.00,
@@ -1095,7 +1070,7 @@ async function main() {
       data: {
         id: uuid(),
         organizationId: org.id,
-        branchId: mainBranch.id,
+        
         category: 'SUPPLIES',
         description: 'Classroom materials restock — Q4 2024',
         amount: 840.50,
@@ -1150,7 +1125,7 @@ async function main() {
       data: {
         id: uuid(),
         organizationId: org.id,
-        branchId: mainBranch.id,
+        
         categoryId: invCategory.id,
         supplierId: supplier.id,
         materialId: materials[0].id,
@@ -1189,7 +1164,7 @@ async function main() {
       data: {
         id: uuid(),
         organizationId: org.id,
-        branchId: mainBranch.id,
+        
         categoryId: invCategory.id,
         supplierId: supplier.id,
         materialId: materials[1].id,
@@ -1263,7 +1238,7 @@ async function main() {
       studentId: liamStudent.id,
       badgeId: badges[3].id,
       milestoneId: milestoneMap['Mathematics'][2].id,
-      awardedByUserId: guideUser.id,
+      awardedByUserId: teacherUser.id,
       note: 'Outstanding work with the 1000-cube!',
     },
   });
@@ -1560,7 +1535,7 @@ async function main() {
   console.log('  principal@sunrise.edu    →  ORG_ADMIN');
   console.log('  branchadmin@sunrise.edu  →  BRANCH_ADMIN');
   console.log('  teacher@sunrise.edu      →  TEACHER');
-  console.log('  guide@sunrise.edu        →  GUIDE');
+  console.log('  removedGuide@sunrise.edu        →  REMOVED_GUIDE');
   console.log('  finance@sunrise.edu      →  FINANCE_STAFF');
   console.log('  hr@sunrise.edu           →  HR_STAFF');
   console.log('  frontdesk@sunrise.edu    →  FRONT_DESK');

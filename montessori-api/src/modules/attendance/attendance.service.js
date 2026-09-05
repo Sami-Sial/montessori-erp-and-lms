@@ -43,9 +43,14 @@ export const markAttendance = async (
   });
   if (!student) throw new AppError('NOT_FOUND', 'Student not found', 404);
 
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { studentId, classroomId, organizationId, status: 'ACTIVE' },
+  });
+  if (!enrollment) throw new AppError('NOT_FOUND', 'Active enrollment not found', 404);
+
   const record = await prisma.attendanceRecord.upsert({
     where: {
-      studentId_date_checkType: { studentId, date: normalizedDate, checkType },
+      enrollmentId_date_checkType: { enrollmentId: enrollment.id, date: normalizedDate, checkType },
     },
     update: {
       status,
@@ -57,6 +62,7 @@ export const markAttendance = async (
     },
     create: {
       organizationId,
+      enrollmentId: enrollment.id,
       studentId,
       classroomId,
       date: normalizedDate,
@@ -109,11 +115,23 @@ export const bulkMarkAttendance = async (
 ) => {
   const normalizedDate = dateOnly(date);
 
+  const enrollments = await prisma.enrollment.findMany({
+    where: {
+      organizationId,
+      classroomId,
+      status: 'ACTIVE',
+      studentId: { in: records.map(r => r.studentId) },
+    }
+  });
+  const enrollmentMap = Object.fromEntries(enrollments.map(e => [e.studentId, e.id]));
+
+  const validRecords = records.filter(r => enrollmentMap[r.studentId]);
+
   const results = await prisma.$transaction(
-    records.map(({ studentId, status, notes }) =>
+    validRecords.map(({ studentId, status, notes }) =>
       prisma.attendanceRecord.upsert({
         where: {
-          studentId_date_checkType: { studentId, date: normalizedDate, checkType },
+          enrollmentId_date_checkType: { enrollmentId: enrollmentMap[studentId], date: normalizedDate, checkType },
         },
         update: {
           status,
@@ -125,6 +143,7 @@ export const bulkMarkAttendance = async (
         },
         create: {
           organizationId,
+          enrollmentId: enrollmentMap[studentId],
           studentId,
           classroomId,
           date: normalizedDate,
@@ -251,7 +270,7 @@ export const getStudentAttendance = async ({ studentId, organizationId, startDat
   return { records, summary };
 };
 
-export const getAttendanceAnalytics = async ({ organizationId, classroomId, month, year }) => {
+export const getAttendanceAnalytics = async ({ organizationId, classroomId, branchId, month, year }) => {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0);
 
@@ -259,6 +278,7 @@ export const getAttendanceAnalytics = async ({ organizationId, classroomId, mont
     where: {
       organizationId,
       ...(classroomId && { classroomId }),
+      ...(branchId && { classroom: { branchId } }),
       date: { gte: startDate, lte: endDate },
       checkType: 'CHECK_IN',
     },
@@ -294,4 +314,85 @@ export const getAttendanceAnalytics = async ({ organizationId, classroomId, mont
     studentStats: Object.values(studentStats),
     chronicallyAbsent,
   };
+};
+
+export const getAttendanceTrend = async ({ organizationId, branchId, academicYearId }) => {
+  let startDate, endDate;
+  
+  if (academicYearId) {
+    const year = await prisma.academicYear.findFirst({ where: { id: academicYearId, organizationId } });
+    if (year) {
+      startDate = year.startDate;
+      endDate = year.endDate;
+    }
+  }
+  
+  if (!startDate || !endDate) {
+    // Default to last 6 months
+    endDate = new Date();
+    startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 5, 1);
+  }
+
+  const records = await prisma.attendanceRecord.findMany({
+    where: {
+      organizationId,
+      ...(branchId && { classroom: { branchId } }),
+      date: { gte: startDate, lte: endDate },
+      checkType: 'CHECK_IN',
+    },
+    select: { date: true, status: true },
+  });
+
+  const monthlyData = {};
+  
+  let current = new Date(startDate);
+  while (current <= endDate) {
+    const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+    monthlyData[monthKey] = { present: 0, total: 0, month: monthKey, rate: 0 };
+    current.setMonth(current.getMonth() + 1);
+  }
+
+  for (const r of records) {
+    const monthKey = `${r.date.getFullYear()}-${String(r.date.getMonth() + 1).padStart(2, '0')}`;
+    if (monthlyData[monthKey]) {
+      monthlyData[monthKey].total++;
+      if (r.status === 'PRESENT' || r.status === 'LATE') {
+        monthlyData[monthKey].present++;
+      }
+    }
+  }
+
+  for (const key in monthlyData) {
+    const item = monthlyData[key];
+    item.rate = item.total > 0 ? Math.round((item.present / item.total) * 100) : 0;
+  }
+
+  return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
+};
+
+
+export const getAttendanceHistory = async ({ organizationId, classroomId, startDate, endDate, skip = 0, take = 50 }) => {
+  const where = { organizationId };
+  if (classroomId) where.classroomId = classroomId;
+  if (startDate || endDate) {
+    where.date = {};
+    if (startDate) where.date.gte = new Date(startDate);
+    if (endDate) where.date.lte = new Date(endDate);
+  }
+
+  const [records, total] = await Promise.all([
+    prisma.attendanceRecord.findMany({
+      where,
+      include: {
+        student: { select: { id: true, firstName: true, lastName: true, studentNumber: true } },
+        classroom: { select: { id: true, name: true } },
+      },
+      orderBy: [{ date: 'desc' }, { student: { firstName: 'asc' } }],
+      skip: Number(skip),
+      take: Number(take),
+    }),
+    prisma.attendanceRecord.count({ where }),
+  ]);
+
+  return { records, total, skip: Number(skip), take: Number(take) };
 };

@@ -178,7 +178,136 @@ router.get(
         }),
       ]);
 
-      res.json(paginatedResponse(messages, total, page, pageSize));
+      const recipientIds = [...new Set(messages.map(m => m.recipientId))];
+      const recipients = await prisma.user.findMany({
+        where: { id: { in: recipientIds } },
+        select: { id: true, firstName: true, lastName: true, avatarUrl: true }
+      });
+      const recipientMap = recipients.reduce((acc, r) => ({ ...acc, [r.id]: r }), {});
+
+      const formattedMessages = messages.map(m => ({
+        ...m,
+        recipient: recipientMap[m.recipientId] || null
+      }));
+
+      res.json(paginatedResponse(formattedMessages, total, page, pageSize));
+    } catch (err) { next(err); }
+  }
+);
+
+/**
+ * @openapi
+ * /communication/recipients:
+ *   get:
+ *     summary: Get viable message recipients (scoped by role)
+ *     tags: [Communication]
+ */
+router.get(
+  '/recipients',
+  requirePermission('message:send'),
+  async (req, res, next) => {
+    try {
+      let allowedRoles = ['TEACHER', 'ORG_ADMIN', 'FRONT_DESK', 'SUPER_ADMIN', 'PARENT', 'STUDENT', 'HR_STAFF', 'FINANCE_STAFF'];
+      let allowedUserIds = null;
+
+      if (req.user.roles.includes('PARENT')) {
+        const guardian = await prisma.guardian.findUnique({
+          where: { userId: req.user.sub },
+          include: {
+            students: {
+              include: {
+                student: {
+                  include: {
+                    classroom: {
+                      include: {
+                        teachers: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        const teacherUserIds = [];
+        if (guardian) {
+          guardian.students.forEach(sg => {
+            const classroom = sg.student?.classroom;
+            if (classroom) {
+              classroom.teachers.forEach(staff => teacherUserIds.push(staff.userId));
+            }
+          });
+        }
+        allowedUserIds = teacherUserIds;
+      } else if (req.user.roles.includes('TEACHER') || req.user.roles.includes('GUIDE')) {
+        const staff = await prisma.staff.findUnique({
+          where: { userId: req.user.sub },
+          include: {
+            classrooms: {
+              include: {
+                students: {
+                  include: {
+                    guardians: {
+                      include: { guardian: true }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        const guardianUserIds = [];
+        if (staff) {
+          staff.classrooms.forEach(c => {
+            c.students.forEach(s => {
+              s.guardians.forEach(sg => {
+                guardianUserIds.push(sg.guardian.userId);
+              });
+            });
+          });
+        }
+
+        const adminStaffIds = await prisma.user.findMany({
+          where: {
+            organizationId: req.organizationId,
+            userRoles: {
+              some: { role: { name: { in: ['ORG_ADMIN', 'FRONT_DESK', 'HR_STAFF', 'FINANCE_STAFF', 'SUPER_ADMIN'] } } }
+            }
+          },
+          select: { id: true }
+        });
+
+        allowedUserIds = [...guardianUserIds, ...adminStaffIds.map(u => u.id)];
+      }
+
+      const where = {
+        organizationId: req.organizationId,
+        isActive: true,
+        ...(allowedUserIds ? { id: { in: allowedUserIds } } : {
+          userRoles: { some: { role: { name: { in: allowedRoles } } } }
+        })
+      };
+
+      const users = await prisma.user.findMany({
+        where,
+        select: { 
+          id: true, 
+          firstName: true, 
+          lastName: true, 
+          userRoles: { include: { role: { select: { name: true, displayName: true } } } } 
+        }
+      });
+      
+      const formatted = users.map(u => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        role: u.userRoles?.[0]?.role?.displayName || 'User'
+      }));
+
+      res.json({ data: formatted });
     } catch (err) { next(err); }
   }
 );

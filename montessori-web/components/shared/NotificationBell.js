@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { communicationApi } from '../../lib/api/communication';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-
+import { useRouter } from 'next/navigation';
+import { useSelector } from 'react-redux';
 export default function NotificationBell({ light = false }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -21,6 +22,14 @@ export default function NotificationBell({ light = false }) {
     mutationFn: communicationApi.markAllNotificationsRead,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
+
+  const readOne = useMutation({
+    mutationFn: communicationApi.markNotificationRead,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+
+  const { user } = useSelector((s) => s.auth);
+  const router = useRouter();
 
   // Close on outside click
   useEffect(() => {
@@ -70,7 +79,7 @@ export default function NotificationBell({ light = false }) {
               notifications.map((n) => (
                 <div
                   key={n.id}
-                  className={`px-4 py-3 hover:bg-bg transition-colors ${!n.isRead ? 'bg-primary/5' : ''}`}
+                  className={`w-full text-left px-4 py-3 transition-colors ${!n.isRead ? 'bg-primary/5' : ''}`}
                 >
                   <p className="text-sm font-medium text-ink">{n.title}</p>
                   <p className="text-xs text-muted mt-0.5 line-clamp-2">{n.body}</p>
@@ -83,13 +92,24 @@ export default function NotificationBell({ light = false }) {
           </div>
 
           <div className="px-4 py-2 border-t border-border">
-            <Link
-              href="/communication/notifications"
+            <button
               className="text-xs text-primary hover:underline focusable"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                setOpen(false);
+                const roleStr = user?.roles?.[0]?.toLowerCase().replace('_', '') || 'parent';
+                let baseRoute = 'parent';
+                if (roleStr === 'teacher' || roleStr === 'guide') baseRoute = 'teacher';
+                if (roleStr === 'student') baseRoute = 'student';
+                if (roleStr === 'frontdesk') baseRoute = 'frontdesk';
+                if (roleStr === 'hrstaff') baseRoute = 'hr';
+                if (roleStr === 'financestaff') baseRoute = 'finance';
+                if (roleStr === 'superadmin') baseRoute = 'superadmin';
+                if (roleStr === 'orgadmin') baseRoute = 'admin';
+                router.push(`/${baseRoute}/notifications`);
+              }}
             >
               View all notifications →
-            </Link>
+            </button>
           </div>
         </div>
       )}

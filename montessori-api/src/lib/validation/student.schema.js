@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const studentCreateSchema = z.object({
-  studentNumber:  z.string().min(1).max(30),
+  studentNumber:  z.string().min(1).max(30).optional(),
   firstName:      z.string().min(1).max(50),
   lastName:       z.string().min(1).max(50),
   dateOfBirth:    z.coerce.date(),
@@ -10,12 +10,16 @@ export const studentCreateSchema = z.object({
   bloodGroup:     z.string().max(5).optional().nullable(),
   nationality:    z.string().max(50).optional().nullable(),
   address:        z.string().max(255).optional().nullable(),
+  isActive:       z.boolean().optional(),
+  admissionFeePaid: z.boolean().optional(),
   // Medical info (optional inline creation)
   allergies:      z.array(z.string()).optional(),
   conditions:     z.array(z.string()).optional(),
   medications:    z.string().optional().nullable(),
   doctorName:     z.string().optional().nullable(),
   doctorPhone:    z.string().optional().nullable(),
+  classroomId:    z.string().uuid(),
+  joinedAcademicYearId: z.string().uuid().optional(),
 });
 
 export const studentUpdateSchema = studentCreateSchema.partial();

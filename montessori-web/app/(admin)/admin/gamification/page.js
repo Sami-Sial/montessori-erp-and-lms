@@ -80,41 +80,52 @@ export default function GamificationPage() {
         ))}
       </div>
 
-      {/* Award badge form */}
-      {tab === 'badges' && showAward && (
-        <form onSubmit={handleSubmit(onAward)} className="card border-accent/30 space-y-3 animate-slide-up">
-          <h2 className="font-semibold text-sm text-ink">Award a badge</h2>
-          <div className="grid md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-muted mb-1 block">Student *</label>
-              <select {...register('studentId', { required: true })} className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:ring-2 focus:ring-accent focus:outline-none">
-                <option value="">Select student</option>
-                {students?.data?.map((s) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
-              </select>
+      {/* Award badge modal */}
+      {showAward && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/50">
+          <div className="bg-surface rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b border-border bg-gradient-to-r from-bg to-surface">
+              <h2 className="font-display font-bold text-xl text-ink">Award a badge</h2>
+              <button type="button" onClick={() => { setShowAward(false); reset(); }} className="p-1.5 text-muted hover:text-ink rounded-lg hover:bg-bg focusable transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+              </button>
             </div>
-            <div>
-              <label className="text-xs text-muted mb-1 block">Badge *</label>
-              <select {...register('badgeId', { required: true })} className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:ring-2 focus:ring-accent focus:outline-none">
-                <option value="">Select badge</option>
-                {badges?.map((b) => <option key={b.id} value={b.id}>{b.name} (+{b.points}pts)</option>)}
-              </select>
-            </div>
+            <form onSubmit={handleSubmit(onAward)} className="flex flex-col">
+              <div className="p-5 space-y-4">
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-semibold text-ink mb-1.5 block">Student <span className="text-danger">*</span></label>
+                    <select {...register('studentId', { required: true })} className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg text-sm focus:ring-2 focus:ring-accent focus:outline-none">
+                      <option value="">Select student</option>
+                      {students?.data?.map((s) => <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-semibold text-ink mb-1.5 block">Badge <span className="text-danger">*</span></label>
+                    <select {...register('badgeId', { required: true })} className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg text-sm focus:ring-2 focus:ring-accent focus:outline-none">
+                      <option value="">Select badge</option>
+                      {badges?.map((b) => <option key={b.id} value={b.id}>{b.name} (+{b.points}pts)</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-ink mb-1.5 block">Note (optional)</label>
+                  <input {...register('note')} placeholder="Why are you awarding this badge?"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-bg text-sm focus:ring-2 focus:ring-accent focus:outline-none" />
+                </div>
+              </div>
+              <div className="p-5 border-t border-border bg-bg/50 flex justify-end gap-3">
+                <button type="button" onClick={() => { setShowAward(false); reset(); }}
+                  className="px-5 py-2.5 rounded-xl border border-border text-sm font-semibold text-muted hover:text-ink hover:bg-surface transition-colors focusable">Cancel</button>
+                <button type="submit" disabled={isSubmitting || awardMut.isPending}
+                  className="flex items-center gap-2 px-6 py-2.5 bg-accent text-white rounded-xl text-sm font-bold hover:bg-amber-500 disabled:opacity-50 transition-all shadow-sm focusable">
+                  {(isSubmitting || awardMut.isPending) && <Loader2 size={15} className="animate-spin" />}
+                  {!isSubmitting && !awardMut.isPending && <span>🏅</span>} Award Badge
+                </button>
+              </div>
+            </form>
           </div>
-          <div>
-            <label className="text-xs text-muted mb-1 block">Note (optional)</label>
-            <input {...register('note')} placeholder="Why are you awarding this badge?"
-              className="w-full px-3 py-2 rounded-lg border border-border bg-bg text-sm focus:ring-2 focus:ring-accent focus:outline-none" />
-          </div>
-          <div className="flex gap-2">
-            <button type="submit" disabled={isSubmitting || awardMut.isPending}
-              className="flex items-center gap-2 px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-amber-500 disabled:opacity-50 focusable">
-              {(isSubmitting || awardMut.isPending) && <Loader2 size={14} className="animate-spin" />}
-              🏅 Award
-            </button>
-            <button type="button" onClick={() => { setShowAward(false); reset(); }}
-              className="px-4 py-2 rounded-lg border border-border text-sm text-muted hover:text-ink focusable">Cancel</button>
-          </div>
-        </form>
+        </div>
       )}
 
       {/* Badges catalog */}

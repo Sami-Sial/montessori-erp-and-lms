@@ -53,7 +53,10 @@ export default function AIChatWidget() {
     setLoading(true);
 
     try {
-      const res = await aiApi.chat({ message: userMsg.content, conversationId });
+      const payload = { message: userMsg.content };
+      if (conversationId) payload.conversationId = conversationId;
+      
+      const res = await aiApi.chat(payload);
       setConversationId(res.conversationId);
       setMessages((m) => [...m, { role: 'assistant', content: res.reply, ts: new Date() }]);
     } catch {

@@ -1,15 +1,18 @@
 import { z } from 'zod';
 
 export const staffCreateSchema = z.object({
-  userId:          z.string().uuid(),
-  branchId:        z.string().uuid(),
+  firstName:       z.string().min(1).max(50),
+  lastName:        z.string().min(1).max(50),
+  email:           z.string().email(),
+  phone:           z.string().optional().nullable(),
+  role:            z.enum(['TEACHER', 'HR_STAFF', 'FINANCE_STAFF', 'ADMIN', 'FRONT_DESK']).default('TEACHER'),
   employeeNumber:  z.string().min(1).max(30),
   jobTitle:        z.string().min(1).max(100),
   department:      z.string().optional().nullable(),
   employmentType:  z.enum(['FULL_TIME','PART_TIME','CONTRACT','INTERN']).default('FULL_TIME'),
   startDate:       z.coerce.date(),
   endDate:         z.coerce.date().optional().nullable(),
-  salary:          z.coerce.number().positive().optional().nullable(),
+  salary:          z.coerce.number().positive(),
   currency:        z.string().length(3).default('USD'),
   qualifications:  z.array(z.string()).optional(),
   certifications:  z.array(z.string()).optional(),

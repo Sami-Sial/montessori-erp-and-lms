@@ -1,113 +1,127 @@
 'use client';
-/**
- * Parent Shell — Card-first, warm. Accent: Marigold (#E3A83D).
- * Nav grammar: BOTTOM TAB BAR (mobile-first, feels like an app).
- * Parents primarily use phones — bottom nav is the right choice here.
- */
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { Home, ClipboardCheck, BookOpen, MessageSquare, Bell, LogOut, Sparkles } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Home, ClipboardCheck, BookOpen, MessageSquare, Sparkles, LogOut, CreditCard, Award } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
-import { clearAuth } from '../../store/authSlice';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '../../lib/hooks/useAuth';
 import NotificationBell from '../shared/NotificationBell';
+import SyncStatusIndicator from '../shared/SyncStatusIndicator';
 import AIChatWidget from '../shared/AIChatWidget';
 
-const TABS = [
-  { href: '/parent/dashboard',  label: 'Home',        icon: Home },
+const NAV_ITEMS = [
+  { href: '/parent/dashboard',  label: 'Overview',    icon: Home },
   { href: '/parent/progress',   label: 'Progress',    icon: BookOpen },
   { href: '/parent/attendance', label: 'Attendance',  icon: ClipboardCheck },
+  { href: '/parent/achievements',label:'Achievements',icon: Award },
+  { href: '/parent/billing',    label: 'Billing',     icon: CreditCard },
   { href: '/parent/messages',   label: 'Messages',    icon: MessageSquare },
   { href: '/parent/ai',         label: 'Ask AI',      icon: Sparkles },
 ];
 
 export default function ParentShell({ children }) {
+  const [expanded, setExpanded] = useState(false);
   const pathname = usePathname();
   const dispatch = useDispatch();
   const router = useRouter();
   const { user } = useSelector((s) => s.auth);
+  const { logout } = useAuth();
+
+  const handleLogout = () => logout();
 
   return (
-    <div className="min-h-screen bg-bg flex flex-col pb-20 md:pb-0">
-      {/* ── Top bar (minimal) ─────────────────────────────────────────── */}
-      <header className="bg-surface border-b border-border sticky top-0 z-40">
-        <div className="flex items-center justify-between px-4 h-14 max-w-screen-md mx-auto">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center font-display font-bold text-accent text-sm">
-              M
-            </div>
-            <span className="font-display font-semibold text-ink text-sm">
-              {user?.firstName ? `Hi, ${user.firstName}` : 'Montessori'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-            <button
-              onClick={() => { dispatch(clearAuth()); router.replace('/login'); }}
-              className="p-1.5 text-muted hover:text-ink rounded-lg focusable"
-              aria-label="Log out"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Content ────────────────────────────────────────────────────── */}
-      <main className="flex-1 p-4 max-w-screen-md mx-auto w-full">
-        {children}
-      </main>
-
-      {/* ── Bottom Tab Bar (mobile) ──────────────────────────────────── */}
+    <div className="flex h-screen overflow-hidden bg-bg">
+      {/* ─── Nav Rail ────────────────────────────────────────────────────────── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 bg-surface border-t border-border flex md:hidden z-40"
-        aria-label="Parent navigation"
+        className={`flex flex-col bg-primary text-white transition-all duration-200 shrink-0 ${
+          expanded ? 'w-56' : 'w-16'
+        }`}
+        onMouseEnter={() => setExpanded(true)}
+        onMouseLeave={() => setExpanded(false)}
       >
-        {TABS.map((tab) => {
-          const active = pathname.startsWith(tab.href);
-          return (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-xs transition-colors focusable ${
-                active ? 'text-accent' : 'text-muted hover:text-ink'
-              }`}
-              aria-current={active ? 'page' : undefined}
-            >
-              <tab.icon
-                size={22}
-                strokeWidth={active ? 2.5 : 1.8}
-                aria-hidden="true"
-              />
-              <span>{tab.label}</span>
-            </Link>
-          );
-        })}
+        {/* Logo */}
+        <div className="flex items-center h-16 px-3 border-b border-primary-light/30">
+          <div className="w-9 h-9 rounded-lg bg-white/15 flex items-center justify-center font-display font-bold text-base shrink-0">
+            M
+          </div>
+          {expanded && (
+            <span className="ml-3 font-display font-semibold text-sm truncate animate-fade-in">
+              Montessori
+            </span>
+          )}
+        </div>
+
+        {/* Nav items */}
+        <div className="flex-1 py-3 space-y-0.5 overflow-y-auto">
+          {NAV_ITEMS.map((item) => (
+            <NavRailItem
+              key={item.href}
+              {...item}
+              expanded={expanded}
+              active={pathname.startsWith(item.href)}
+            />
+          ))}
+        </div>
+
+        {/* User + logout */}
+        <div className="p-2 border-t border-primary-light/30">
+          {expanded && (
+            <p className="px-2 py-1 text-xs text-white/60 truncate">
+              {user?.firstName} {user?.lastName}
+            </p>
+          )}
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors text-sm"
+            aria-label="Log out"
+          >
+            <LogOut size={18} className="shrink-0" />
+            {expanded && <span className="animate-fade-in">Log out</span>}
+          </button>
+        </div>
       </nav>
 
-      {/* Desktop side nav */}
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-56 bg-surface border-r border-border flex-col pt-16">
-        <nav className="p-3 space-y-1" aria-label="Parent navigation">
-          {TABS.map((tab) => {
-            const active = pathname.startsWith(tab.href);
-            return (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors focusable ${
-                  active
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-muted hover:bg-bg hover:text-ink'
-                }`}
-              >
-                <tab.icon size={18} aria-hidden="true" />
-                {tab.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </aside>
+      {/* ─── Main area ───────────────────────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top bar */}
+        <header className="h-14 bg-surface border-b border-border flex items-center justify-between px-6 shrink-0">
+          <h1 className="font-display font-semibold text-ink text-base">
+            {NAV_ITEMS.find((n) => pathname.startsWith(n.href))?.label ?? 'Dashboard'}
+          </h1>
+          <div className="flex items-center gap-3">
+            <SyncStatusIndicator />
+            <NotificationBell />
+            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-sm">
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
+            </div>
+          </div>
+        </header>
+
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {children}
+        </main>
+      </div>
 
       <AIChatWidget />
     </div>
+  );
+}
+
+function NavRailItem({ href, label, icon: Icon, expanded, active }) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-3 mx-2 px-2 py-2.5 rounded-lg transition-colors text-sm focusable ${
+        active
+          ? 'bg-white/20 text-white'
+          : 'text-white/70 hover:bg-white/10 hover:text-white'
+      }`}
+      aria-current={active ? 'page' : undefined}
+    >
+      <Icon size={18} className="shrink-0" aria-hidden="true" />
+      {expanded && <span className="truncate animate-fade-in">{label}</span>}
+    </Link>
   );
 }

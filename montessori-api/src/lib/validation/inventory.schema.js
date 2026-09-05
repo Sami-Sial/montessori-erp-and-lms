@@ -4,7 +4,6 @@ export const inventoryItemSchema = z.object({
   categoryId:    z.string().uuid().optional().nullable(),
   supplierId:    z.string().uuid().optional().nullable(),
   materialId:    z.string().uuid().optional().nullable(),
-  branchId:      z.string().uuid().optional().nullable(),
   name:          z.string().min(1).max(200),
   description:   z.string().optional().nullable(),
   sku:           z.string().optional().nullable(),
@@ -30,7 +29,6 @@ export const stockMovementSchema = z.object({
 
 export const purchaseOrderSchema = z.object({
   supplierId:    z.string().uuid(),
-  branchId:      z.string().uuid().optional().nullable(),
   orderDate:     z.coerce.date().optional().nullable(),
   expectedDate:  z.coerce.date().optional().nullable(),
   notes:         z.string().optional().nullable(),

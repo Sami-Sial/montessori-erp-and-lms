@@ -6,9 +6,10 @@ import { studentsApi } from '../../../../lib/api/students';
 import { attendanceApi } from '../../../../lib/api/attendance';
 import { aiApi } from '../../../../lib/api/ai';
 import { communicationApi } from '../../../../lib/api/communication';
+import { financeApi } from '../../../../lib/api/finance';
 import { SkeletonCard, SkeletonStatCard } from '../../../../components/shared/Skeleton';
 import Link from 'next/link';
-import { BookOpen, ClipboardCheck, MessageSquare, Sparkles, ChevronRight, Heart } from 'lucide-react';
+import { BookOpen, ClipboardCheck, MessageSquare, Sparkles, ChevronRight, Heart, CreditCard, ArrowRight, DollarSign } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 
 const MASTERY_COLORS = {
@@ -58,19 +59,33 @@ export default function ParentDashboard() {
     queryFn: () => communicationApi.getMessages({ folder: 'inbox', pageSize: 3 }),
   });
 
+  const { data: invoicesData } = useQuery({
+    queryKey: ['finance', 'invoices', 'parent-dash'],
+    queryFn: () => financeApi.listInvoices({ pageSize: 5 }),
+  });
+
+  const invoices = invoicesData?.data ?? [];
+  const unpaidInvoices = invoices.filter((inv) => ['SENT', 'PARTIALLY_PAID', 'OVERDUE'].includes(inv.status));
+  const totalOutstanding = unpaidInvoices.reduce(
+    (s, inv) => s + Math.max(0, Number(inv.totalAmount ?? 0) - Number(inv.paidAmount ?? 0)),
+    0
+  );
+
   const unreadMessages = messages?.data?.filter((m) => m.status !== 'READ')?.length ?? 0;
   const latestSummary = attendance?.summary?.[0];
 
   return (
-    <div className="space-y-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">
-          Hi, {user?.firstName} 👋
-        </h1>
-        <p className="text-muted text-sm mt-0.5">
-          {format(new Date(), 'EEEE, MMMM d')}
-        </p>
+    <div className="space-y-8 pb-10">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-ink">
+            Hi, {user?.firstName} 👋
+          </h1>
+          <p className="text-muted text-sm mt-1">
+            {format(new Date(), 'EEEE, MMMM d')} — Parent Overview
+          </p>
+        </div>
       </div>
 
       {/* Children selector (if multiple) */}
@@ -109,36 +124,38 @@ export default function ParentDashboard() {
 
       {/* Attendance this month */}
       {latestSummary && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-sm text-ink flex items-center gap-2">
-              <ClipboardCheck size={15} className="text-secondary" aria-hidden="true" />
+        <section className="card p-6 border-secondary/20">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-display font-semibold text-lg text-ink flex items-center gap-2">
+              <ClipboardCheck size={18} className="text-secondary" aria-hidden="true" />
               Attendance this month
             </h2>
             <Link href="/parent/attendance" className="text-xs text-secondary hover:underline focusable">See all</Link>
           </div>
-          <div className="grid grid-cols-4 gap-2 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
               { label: 'Present', value: latestSummary.presentDays,  color: 'text-success' },
               { label: 'Absent',  value: latestSummary.absentDays,   color: 'text-danger' },
               { label: 'Late',    value: latestSummary.lateDays,      color: 'text-warning' },
               { label: 'Rate',    value: `${latestSummary.attendanceRate?.toFixed(0)}%`, color: 'text-primary' },
             ].map(({ label, value, color }) => (
-              <div key={label}>
-                <p className={`font-display text-xl font-bold ${color}`}>{value}</p>
-                <p className="text-xs text-muted">{label}</p>
+              <div key={label} className="stat-card">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-medium text-muted uppercase tracking-wide">{label}</p>
+                </div>
+                <p className={`font-display text-2xl font-bold ${color}`}>{value}</p>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Progress snapshot */}
       {loadingProgress ? <SkeletonCard /> : progress?.progress?.length > 0 && (
         <div className="card">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-sm text-ink flex items-center gap-2">
-              <BookOpen size={15} className="text-primary" aria-hidden="true" />
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-display font-semibold text-lg text-ink flex items-center gap-2">
+              <BookOpen size={18} className="text-primary" aria-hidden="true" />
               Learning progress
             </h2>
             <Link href="/parent/progress" className="text-xs text-primary hover:underline focusable">Full view</Link>
@@ -172,8 +189,8 @@ export default function ParentDashboard() {
       {/* Day in review (AI digests) */}
       {dayReviews?.data?.length > 0 && (
         <div className="card border-accent/30 bg-accent/5">
-          <h2 className="font-semibold text-sm text-ink flex items-center gap-2 mb-3">
-            <Sparkles size={15} className="text-accent" aria-hidden="true" />
+          <h2 className="font-display font-semibold text-lg text-ink flex items-center gap-2 mb-4">
+            <Sparkles size={18} className="text-accent" aria-hidden="true" />
             Day in Review
           </h2>
           <p className="text-sm text-ink leading-relaxed">{dayReviews.data[0].summary}</p>
@@ -185,9 +202,9 @@ export default function ParentDashboard() {
 
       {/* Messages */}
       <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-semibold text-sm text-ink flex items-center gap-2">
-            <MessageSquare size={15} className="text-muted" aria-hidden="true" />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-display font-semibold text-lg text-ink flex items-center gap-2">
+            <MessageSquare size={18} className="text-muted" aria-hidden="true" />
             Messages
             {unreadMessages > 0 && (
               <span className="w-5 h-5 rounded-full bg-accent text-white text-xs font-bold flex items-center justify-center">

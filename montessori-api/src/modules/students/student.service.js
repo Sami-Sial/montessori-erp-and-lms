@@ -6,33 +6,75 @@ import { writeAuditLog } from '../../middleware/auditLog.js';
 
 // ─── Students ────────────────────────────────────────────────────────────────
 
-export const listStudents = async ({ organizationId, page, pageSize, search, classroomId, status }) => {
+export const listStudents = async ({ organizationId, user, page, pageSize, search, classroomId, academicYearId, status, sortBy, sortDir, unenrolledOnly }) => {
+  const isAdmin = user?.roles?.includes('SUPER_ADMIN') || user?.roles?.includes('ORG_ADMIN');
+  const isTeacher = !isAdmin && user?.roles?.includes('TEACHER');
+  const isParent = !isAdmin && !isTeacher && user?.roles?.includes('PARENT');
+
   const where = {
     organizationId,
     deletedAt: null,
+    ...(isParent && { guardians: { some: { guardian: { userId: user.sub } } } }),
+    ...(status !== undefined && { isActive: status === 'active' }),
     ...(search && {
       OR: [
         { firstName: { contains: search, mode: 'insensitive' } },
         { lastName: { contains: search, mode: 'insensitive' } },
         { studentNumber: { contains: search, mode: 'insensitive' } },
+        {
+          guardians: {
+            some: {
+              guardian: {
+                OR: [
+                  { firstName: { contains: search, mode: 'insensitive' } },
+                  { lastName: { contains: search, mode: 'insensitive' } },
+                ],
+              },
+            },
+          },
+        },
       ],
     }),
-    ...(classroomId && {
+    ...((classroomId || academicYearId || isTeacher) && {
       enrollments: {
         some: {
-          classroomId,
+          ...(classroomId && { classroomId }),
+          ...(academicYearId && { academicYearId }),
           status: 'ACTIVE',
+          ...(isTeacher && {
+            classroom: {
+              staffAssignments: {
+                some: { staff: { userId: user.sub } }
+              }
+            }
+          })
         },
       },
     }),
+    ...(unenrolledOnly === 'true' && {
+      enrollments: {
+        none: { status: 'ACTIVE' }
+      }
+    }),
   };
+
+  let orderBy = [{ lastName: 'asc' }, { firstName: 'asc' }];
+  if (sortBy === 'age') {
+    orderBy = [{ dateOfBirth: sortDir === 'asc' ? 'desc' : 'asc' }];
+  } else if (sortBy === 'studentNumber') {
+    orderBy = [{ studentNumber: sortDir || 'asc' }];
+  } else if (sortBy === 'firstName') {
+    orderBy = [{ firstName: sortDir || 'asc' }, { lastName: 'asc' }];
+  } else if (sortBy === 'lastName') {
+    orderBy = [{ lastName: sortDir || 'asc' }, { firstName: 'asc' }];
+  }
 
   const [total, students] = await Promise.all([
     prisma.student.count({ where }),
     prisma.student.findMany({
       where,
       ...paginate(page, pageSize),
-      orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+      orderBy,
       include: {
         enrollments: {
           where: { status: 'ACTIVE' },
@@ -43,7 +85,7 @@ export const listStudents = async ({ organizationId, page, pageSize, search, cla
           where: { isPrimary: true },
           include: {
             guardian: {
-              select: { firstName: true, lastName: true, phone: true, relationship: true },
+              select: { userId: true, firstName: true, lastName: true, phone: true, relationship: true },
             },
           },
           take: 1,
@@ -82,15 +124,25 @@ export const getStudentById = async (id, organizationId) => {
   if (!student) throw new AppError('NOT_FOUND', 'Student not found', 404);
   assertTenantOwnership(student.organizationId, organizationId);
 
+  // If we wanted to strictly enforce authorization for single-student GET requests,
+  // we could check if the user is a teacher and if this student is in their class here too.
+
   return student;
 };
 
 export const createStudent = async (organizationId, data, actorId) => {
-  const { allergies, conditions, medications, doctorName, doctorPhone, ...studentData } = data;
+  const { allergies, conditions, medications, doctorName, doctorPhone, classroomId, joinedAcademicYearId, ...studentData } = data;
+
+  // Auto-generate studentNumber if not provided
+  let finalStudentNumber = data.studentNumber;
+  if (!finalStudentNumber) {
+    const count = await prisma.student.count({ where: { organizationId } });
+    finalStudentNumber = `STU-${String(count + 1).padStart(3, '0')}`;
+  }
 
   // Unique student number check
   const existing = await prisma.student.findFirst({
-    where: { organizationId, studentNumber: data.studentNumber, deletedAt: null },
+    where: { organizationId, studentNumber: finalStudentNumber, deletedAt: null },
   });
   if (existing) {
     throw new AppError('CONFLICT', 'Student number already in use', 409);
@@ -101,8 +153,29 @@ export const createStudent = async (organizationId, data, actorId) => {
       data: {
         organizationId,
         ...studentData,
+        joinedAcademicYearId,
+        studentNumber: finalStudentNumber,
       },
     });
+
+    if (classroomId) {
+      // Find active academic year
+      const year = await tx.academicYear.findFirst({
+        where: { organizationId, isCurrent: true },
+      });
+      if (year) {
+        await tx.enrollment.create({
+          data: {
+            organizationId,
+            studentId: s.id,
+            classroomId,
+            academicYearId: year.id,
+            enrolledAt: new Date(),
+            status: 'ACTIVE',
+          },
+        });
+      }
+    }
 
     // Create medical info if provided
     if (allergies || conditions || medications || doctorName || doctorPhone) {

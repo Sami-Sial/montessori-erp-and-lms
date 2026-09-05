@@ -7,6 +7,7 @@ const uiSlice = createSlice({
     locale: 'en',
     toasts: [],
     aiChatOpen: false,
+    selectedAcademicYearId: null,
   },
   reducers: {
     setTheme: (state, action) => { state.theme = action.payload; },
@@ -19,8 +20,9 @@ const uiSlice = createSlice({
     },
     toggleAIChat: (state) => { state.aiChatOpen = !state.aiChatOpen; },
     closeAIChat: (state) => { state.aiChatOpen = false; },
+    setSelectedAcademicYearId: (state, action) => { state.selectedAcademicYearId = action.payload; },
   },
 });
 
-export const { setTheme, setLocale, addToast, removeToast, toggleAIChat, closeAIChat } = uiSlice.actions;
+export const { setTheme, setLocale, addToast, removeToast, toggleAIChat, closeAIChat, setSelectedAcademicYearId } = uiSlice.actions;
 export default uiSlice.reducer;

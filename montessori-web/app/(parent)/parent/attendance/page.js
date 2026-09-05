@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { studentsApi } from '../../../../lib/api/students';
 import { attendanceApi } from '../../../../lib/api/attendance';
@@ -14,12 +15,16 @@ const STATUS_CHIP = {
 };
 
 export default function ParentAttendancePage() {
+  const [selectedChildId, setSelectedChildId] = useState(null);
+
   const { data: studentsData } = useQuery({
     queryKey: ['students', 'mine'],
     queryFn: () => studentsApi.list({ pageSize: 10 }),
   });
 
-  const child = studentsData?.data?.[0];
+  const children = studentsData?.data ?? [];
+  const childId = selectedChildId ?? children[0]?.id;
+  const child = children.find(c => c.id === childId) ?? children[0];
 
   const { data: attendance, isLoading } = useQuery({
     queryKey: ['attendance', 'student', child?.id],
@@ -35,6 +40,18 @@ export default function ParentAttendancePage() {
       <h1 className="font-display text-xl font-bold text-ink">
         {child?.firstName}'s Attendance
       </h1>
+
+      {/* Child selector */}
+      {children.length > 1 && (
+        <div className="flex gap-2">
+          {children.map((c) => (
+            <button key={c.id} onClick={() => setSelectedChildId(c.id)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focusable ${c.id === childId ? 'bg-accent text-white' : 'bg-bg border border-border text-muted hover:text-ink'}`}>
+              {c.firstName}
+            </button>
+          ))}
+        </div>
+      )}
 
       {summary && (
         <div className="grid grid-cols-2 gap-3">

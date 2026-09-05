@@ -9,6 +9,9 @@ import { Router } from 'express';
 import { z } from 'zod';
 import prisma from '../../config/db.js';
 import { authenticate } from '../../middleware/authenticate.js';
+import argon2 from 'argon2';
+import crypto from 'crypto';
+import { sendEmail } from '../../lib/email.js';
 import { requirePermission } from '../../middleware/requirePermission.js';
 import { scopeTenant } from '../../middleware/tenantScope.js';
 import { validate, validateQuery } from '../../middleware/validate.js';
@@ -42,11 +45,10 @@ router.get(
   validateQuery(paginationSchema.extend({ branchId: z.string().uuid().optional(), isActive: z.coerce.boolean().optional() })),
   async (req, res, next) => {
     try {
-      const { page, pageSize, branchId, isActive, search } = req.query;
+      const { page, pageSize, isActive, search } = req.query;
       const where = {
         organizationId: req.organizationId,
         deletedAt: null,
-        ...(branchId && { branchId }),
         ...(isActive !== undefined && { isActive }),
         ...(search && {
           OR: [
@@ -56,6 +58,13 @@ router.get(
             { jobTitle: { contains: search, mode: 'insensitive' } },
           ],
         }),
+        user: {
+          userRoles: {
+            some: {
+              role: { name: { notIn: ['SUPER_ADMIN', 'STUDENT', 'PARENT'] } }
+            }
+          }
+        }
       };
 
       const [total, staff] = await Promise.all([
@@ -65,8 +74,12 @@ router.get(
           ...paginate(page, pageSize),
           orderBy: { user: { lastName: 'asc' } },
           include: {
-            user: { select: { id: true, firstName: true, lastName: true, email: true, phone: true, avatarUrl: true } },
-            branch: { select: { id: true, name: true } },
+            user: { 
+              select: { 
+                id: true, firstName: true, lastName: true, email: true, phone: true, avatarUrl: true,
+                userRoles: { include: { role: true } }
+              } 
+            },
           },
         }),
       ]);
@@ -89,7 +102,6 @@ router.get('/staff/:id', requirePermission('hr:read'), async (req, res, next) =>
       where: { id: req.params.id, deletedAt: null },
       include: {
         user: true,
-        branch: true,
         classrooms: { include: { classroom: { select: { id: true, name: true } } } },
         leaveRequests: { orderBy: { createdAt: 'desc' }, take: 10 },
         payrolls: { orderBy: [{ year: 'desc' }, { month: 'desc' }], take: 12 },
@@ -110,15 +122,62 @@ router.get('/staff/:id', requirePermission('hr:read'), async (req, res, next) =>
  */
 router.post('/staff', requirePermission('hr:write'), validate(staffCreateSchema), async (req, res, next) => {
   try {
-    const existing = await prisma.staff.findFirst({
-      where: { organizationId: req.organizationId, employeeNumber: req.body.employeeNumber, deletedAt: null },
-    });
-    if (existing) throw new AppError('CONFLICT', 'Employee number already in use', 409);
+    let { firstName, lastName, email, phone, role, ...staffData } = req.body;
 
-    const staff = await prisma.staff.create({
-      data: { organizationId: req.organizationId, ...req.body },
-      include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
     });
+    if (existingUser) throw new AppError('CONFLICT', 'Email already in use', 409);
+
+    const existingStaff = await prisma.staff.findFirst({
+      where: { organizationId: req.organizationId, employeeNumber: staffData.employeeNumber, deletedAt: null },
+    });
+    if (existingStaff) throw new AppError('CONFLICT', 'Employee number already in use', 409);
+
+    const password = crypto.randomBytes(8).toString('hex');
+    const passwordHash = await argon2.hash(password);
+
+    const staff = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          phone,
+          passwordHash,
+          role,
+          isActive: true,
+        },
+      });
+
+      return await tx.staff.create({
+        data: {
+          organizationId: req.organizationId,
+          userId: user.id,
+          ...staffData,
+        },
+        include: { user: { select: { id: true, firstName: true, lastName: true, email: true } } },
+      });
+    });
+
+    try {
+      const org = await prisma.organization.findUnique({ where: { id: req.organizationId } });
+      await sendEmail({
+        to: email,
+        subject: `Welcome to ${org?.name || 'Montessori ERP'}`,
+        templateName: 'staff-welcome',
+        context: {
+          firstName,
+          loginUrl: process.env.FRONTEND_URL || 'http://localhost:3000/login',
+          organizationName: org?.name || 'Montessori ERP',
+          email,
+          password,
+        }
+      });
+    } catch (emailErr) {
+      console.error('Failed to send welcome email:', emailErr);
+    }
+
     res.status(201).json(staff);
   } catch (err) { next(err); }
 });

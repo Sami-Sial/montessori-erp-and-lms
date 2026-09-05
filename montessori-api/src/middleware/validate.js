@@ -6,11 +6,14 @@
  * On failure, throws a ZodError which is caught by the central errorHandler
  * and returned as a VALIDATION_ERROR with field-level details.
  */
+import fs from 'fs';
+
 export const validate = (schema) => (req, res, next) => {
   try {
     req.body = schema.parse(req.body);
     next();
   } catch (err) {
+    fs.appendFileSync('validation-debug.txt', JSON.stringify(err.errors || err, null, 2) + '\n');
     next(err); // ZodError → errorHandler formats it as 422
   }
 };

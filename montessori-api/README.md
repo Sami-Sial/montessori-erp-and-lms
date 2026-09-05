@@ -41,6 +41,7 @@ npm run dev
 | `NODE_ENV` | No | `development` \| `production` (default: development) |
 | `PORT` | No | Server port (default: 4000) |
 | `DATABASE_URL` | **Yes** | PostgreSQL connection string |
+| `DIRECT_URL` | No | Direct DB connection (required for Supabase pooler) |
 | `REDIS_URL` | No | Redis connection string (default: redis://localhost:6379) |
 | `JWT_ACCESS_SECRET` | **Yes** | Min 64-char secret for access tokens |
 | `JWT_REFRESH_SECRET` | **Yes** | Min 64-char secret for refresh tokens |
@@ -54,10 +55,12 @@ npm run dev
 | `CLOUDINARY_CLOUD_NAME` | No | Cloudinary cloud (file uploads) |
 | `CLOUDINARY_API_KEY` | No | Cloudinary key |
 | `CLOUDINARY_API_SECRET` | No | Cloudinary secret |
-| `GROK_API_KEY` | No | xAI Grok API key — **never expose to frontend** |
-| `GROK_MODEL` | No | Grok model name (default: grok-4) |
+| `GROK_API_KEY` | No | Groq AI key — **never expose to frontend** |
+| `GROK_MODEL` | No | Groq model name (default: qwen/qwen3.8-27b) |
 | `CORS_ORIGINS` | No | Comma-separated allowed origins |
-| `FRONTEND_URL` | No | Frontend URL for email links |
+| `FRONTEND_URL` | No | Frontend URL for email links & Stripe |
+| `STRIPE_SECRET_KEY` | No | Stripe Secret Key for payments |
+| `STRIPE_WEBHOOK_SECRET`| No | Stripe Webhook Secret |
 | `RATE_LIMIT_WINDOW_MS` | No | Rate limit window in ms (default: 900000) |
 | `RATE_LIMIT_MAX` | No | Max requests per window (default: 100) |
 | `AUTH_RATE_LIMIT_MAX` | No | Max auth requests per 15min (default: 10) |

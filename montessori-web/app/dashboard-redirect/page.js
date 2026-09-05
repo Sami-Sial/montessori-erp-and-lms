@@ -6,16 +6,13 @@ import { setCredentials, clearAuth } from '../../store/authSlice';
 import { authApi } from '../../lib/api/auth';
 
 const ROLE_REDIRECT = {
-  SUPER_ADMIN:   '/admin/dashboard',
+  SUPER_ADMIN:   '/superadmin/dashboard',
   ORG_ADMIN:     '/admin/dashboard',
-  BRANCH_ADMIN:  '/admin/dashboard',
-  TEACHER:       '/teacher/dashboard',
-  GUIDE:         '/teacher/dashboard',
+    TEACHER:       '/teacher/dashboard',
   PARENT:        '/parent/dashboard',
-  STUDENT:       '/student/dashboard',
   FINANCE_STAFF: '/finance/dashboard',
-  HR_STAFF:      '/finance/dashboard',
-  FRONT_DESK:    '/teacher/attendance',
+  HR_STAFF:      '/hr/dashboard',
+  FRONT_DESK:    '/frontdesk/dashboard',
 };
 
 /**

@@ -19,6 +19,7 @@ const generateInvoiceNumber = async (organizationId) => {
 export const listFeeStructures = async (organizationId) => {
   return prisma.feeStructure.findMany({
     where: { organizationId, deletedAt: null, isActive: true },
+    include: { classroom: { select: { id: true, name: true } } },
     orderBy: { name: 'asc' },
   });
 };
@@ -117,11 +118,18 @@ export const createInvoice = async (organizationId, { studentId, dueDate, curren
   const invoiceNumber = await generateInvoiceNumber(organizationId);
   const totalAmount = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
 
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { studentId, organizationId, status: 'ACTIVE' },
+    orderBy: { createdAt: 'desc' }
+  });
+
   const invoice = await prisma.$transaction(async (tx) => {
     const inv = await tx.invoice.create({
       data: {
         organizationId,
         studentId,
+        enrollmentId: enrollment?.id,
+        academicYearId: enrollment?.academicYearId,
         invoiceNumber,
         dueDate,
         currency,
@@ -250,7 +258,89 @@ export const recordPayment = async (organizationId, data, actorId) => {
   return payment;
 };
 
-// ─── Expenses ─────────────────────────────────────────────────────────────────
+// ─── Payments ─────────────────────────────────────────────────────────────────
+
+export const listPayments = async ({ organizationId, page, pageSize }) => {
+  const [total, payments] = await Promise.all([
+    prisma.payment.count({ where: { organizationId } }),
+    prisma.payment.findMany({
+      where: { organizationId },
+      ...paginate(page, pageSize),
+      orderBy: { createdAt: 'desc' },
+      include: {
+        invoice: { select: { invoiceNumber: true, student: { select: { firstName: true, lastName: true } } } },
+        paymentMethod: { select: { name: true, type: true } },
+      },
+    }),
+  ]);
+  return paginatedResponse(payments, total, page, pageSize);
+};
+
+// ─── Batch Invoice Generation ─────────────────────────────────────────────────
+
+export const createBatchInvoices = async (organizationId, { classroomId, feeStructureId, dueDate }, actorId) => {
+  // Get the fee structure
+  const feeStructure = await prisma.feeStructure.findFirst({
+    where: { id: feeStructureId, organizationId, isActive: true },
+  });
+  if (!feeStructure) throw new AppError('NOT_FOUND', 'Fee structure not found', 404);
+
+  // Get all active students in the classroom
+  const enrollments = await prisma.enrollment.findMany({
+    where: {
+      organizationId,
+      status: 'ACTIVE',
+      ...(classroomId && { classroomId }),
+    },
+    include: { student: { select: { id: true, firstName: true, lastName: true } } },
+  });
+
+  if (enrollments.length === 0) throw new AppError('UNPROCESSABLE', 'No active students found for the selected classroom', 422);
+
+  const invoices = await prisma.$transaction(async (tx) => {
+    const created = [];
+    for (const enrollment of enrollments) {
+      const invoiceNumber = await generateInvoiceNumber(organizationId);
+      const amount = Number(feeStructure.amount);
+      const inv = await tx.invoice.create({
+        data: {
+          organizationId,
+          studentId: enrollment.student.id,
+          enrollmentId: enrollment.id,
+          academicYearId: enrollment.academicYearId,
+          invoiceNumber,
+          dueDate: new Date(dueDate),
+          currency: feeStructure.currency ?? 'USD',
+          totalAmount: amount,
+          paidAmount: 0,
+          status: 'DRAFT',
+        },
+      });
+      await tx.invoiceLineItem.create({
+        data: {
+          invoiceId: inv.id,
+          feeStructureId: feeStructure.id,
+          description: feeStructure.name,
+          quantity: 1,
+          unitPrice: amount,
+          totalPrice: amount,
+        },
+      });
+      created.push(inv);
+    }
+    return created;
+  });
+
+  await writeAuditLog({
+    organizationId, actorId, action: 'BATCH_CREATE',
+    entity: 'Invoice', entityId: null,
+    changes: { after: { count: invoices.length, feeStructureId, classroomId } },
+  });
+
+  return { count: invoices.length, message: `Created ${invoices.length} draft invoices` };
+};
+
+
 
 export const listExpenses = async ({ organizationId, page, pageSize, category, startDate, endDate }) => {
   const where = {
@@ -301,10 +391,22 @@ export const createExpense = async (organizationId, data, actorId) => {
 
 // ─── Dashboard summary ────────────────────────────────────────────────────────
 
-export const getFinanceSummary = async (organizationId) => {
+export const getFinanceSummary = async ({ organizationId, academicYearId }) => {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  // If a branch is specified, filter invoices and payments by the student's enrolled classroom branch.
+  // Expenses have a direct branchId field.
+  const enrollmentFilter = {
+    some: {
+      
+      ...(academicYearId && { academicYearId }),
+      status: 'ACTIVE'
+    }
+  };
+  const branchFilterForStudent = academicYearId ? { academicYearId } : {};
+  const branchFilterForExpense = {};
 
   const [
     totalOutstanding,
@@ -314,16 +416,21 @@ export const getFinanceSummary = async (organizationId) => {
   ] = await Promise.all([
     // Total outstanding
     prisma.invoice.aggregate({
-      where: { organizationId, status: { in: ['SENT', 'PARTIALLY_PAID', 'OVERDUE'] }, deletedAt: null },
+      where: { organizationId, status: { in: ['SENT', 'PARTIALLY_PAID', 'OVERDUE'] }, deletedAt: null, ...(academicYearId && { academicYearId }), ...branchFilterForStudent },
       _sum: { totalAmount: true, paidAmount: true },
     }),
     // Overdue count
     prisma.invoice.count({
-      where: { organizationId, status: { in: ['SENT', 'PARTIALLY_PAID'] }, dueDate: { lt: now }, deletedAt: null },
+      where: { organizationId, status: { in: ['SENT', 'PARTIALLY_PAID'] }, dueDate: { lt: now }, deletedAt: null, ...(academicYearId && { academicYearId }), ...branchFilterForStudent },
     }),
     // Collected this month
     prisma.payment.aggregate({
-      where: { organizationId, status: 'COMPLETED', paidAt: { gte: startOfMonth, lte: endOfMonth } },
+      where: {
+        organizationId,
+        status: 'COMPLETED',
+        paidAt: { gte: startOfMonth, lte: endOfMonth },
+        ...(academicYearId && { invoice: { academicYearId } })
+      },
       _sum: { amount: true },
     }),
     // Expenses this month
@@ -344,4 +451,82 @@ export const getFinanceSummary = async (organizationId) => {
     expensesThisMonth: expenses,
     netThisMonth: collected - expenses,
   };
+};
+
+export const getFinanceAnalytics = async ({ organizationId, academicYearId }) => {
+  let startDate, endDate;
+  
+  if (academicYearId) {
+    const year = await prisma.academicYear.findFirst({ where: { id: academicYearId, organizationId } });
+    if (year) {
+      startDate = year.startDate;
+      endDate = year.endDate;
+    }
+  }
+  
+  if (!startDate || !endDate) {
+    // Default to last 6 months if no year specified
+    endDate = new Date();
+    startDate = new Date(endDate.getFullYear(), endDate.getMonth() - 5, 1);
+  }
+
+  const enrollmentFilter = {
+    some: {
+      
+      ...(academicYearId && { academicYearId }),
+      status: 'ACTIVE'
+    }
+  };
+  const branchFilterForStudent = academicYearId ? { academicYearId } : {};
+  const branchFilterForExpense = {};
+
+  // Fetch all completed payments and expenses within the date range
+  const [payments, expenses] = await Promise.all([
+    prisma.payment.findMany({
+      where: {
+        organizationId,
+        status: 'COMPLETED',
+        paidAt: { gte: startDate, lte: endDate },
+        ...(academicYearId && { invoice: { academicYearId } })
+      },
+      select: { amount: true, paidAt: true },
+    }),
+    prisma.expense.findMany({
+      where: {
+        organizationId,
+        expenseDate: { gte: startDate, lte: endDate },
+        deletedAt: null,
+      },
+      select: { amount: true, expenseDate: true },
+    }),
+  ]);
+
+  // Group by month
+  const monthlyData = {};
+  
+  // Initialize months
+  let current = new Date(startDate);
+  while (current <= endDate) {
+    const monthKey = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+    monthlyData[monthKey] = { collected: 0, expenses: 0, month: monthKey };
+    current.setMonth(current.getMonth() + 1);
+  }
+
+  // Aggregate payments
+  for (const p of payments) {
+    const monthKey = `${p.paidAt.getFullYear()}-${String(p.paidAt.getMonth() + 1).padStart(2, '0')}`;
+    if (monthlyData[monthKey]) {
+      monthlyData[monthKey].collected += Number(p.amount);
+    }
+  }
+
+  // Aggregate expenses
+  for (const e of expenses) {
+    const monthKey = `${e.expenseDate.getFullYear()}-${String(e.expenseDate.getMonth() + 1).padStart(2, '0')}`;
+    if (monthlyData[monthKey]) {
+      monthlyData[monthKey].expenses += Number(e.amount);
+    }
+  }
+
+  return Object.values(monthlyData).sort((a, b) => a.month.localeCompare(b.month));
 };

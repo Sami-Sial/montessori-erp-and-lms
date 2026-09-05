@@ -34,7 +34,7 @@ export default function TeacherStudentsPage() {
           {data?.data?.map((s) => {
             const ageYears = Math.floor((Date.now() - new Date(s.dateOfBirth)) / (365.25 * 24 * 3600 * 1000));
             return (
-              <Link key={s.id} href={`/admin/students/${s.id}`}
+              <Link key={s.id} href={`/teacher/students/${s.id}`}
                 className="card flex items-center gap-3 hover:shadow-md transition-shadow group focusable">
                 {s.photoUrl
                   ? <img src={s.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" aria-hidden="true" />

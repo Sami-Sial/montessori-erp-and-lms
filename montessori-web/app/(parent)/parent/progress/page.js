@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { studentsApi } from '../../../../lib/api/students';
@@ -16,6 +17,7 @@ const MASTERY_CONFIG = {
 export default function ParentProgressPage() {
   const params = useSearchParams();
   const childIdParam = params.get('childId');
+  const [selectedChildId, setSelectedChildId] = useState(null);
 
   const { data: studentsData } = useQuery({
     queryKey: ['students', 'mine'],
@@ -23,7 +25,7 @@ export default function ParentProgressPage() {
   });
 
   const children = studentsData?.data ?? [];
-  const childId = childIdParam ?? children[0]?.id;
+  const childId = selectedChildId ?? childIdParam ?? children[0]?.id;
   const child = children.find((c) => c.id === childId) ?? children[0];
 
   const { data: progress, isLoading } = useQuery({
@@ -54,10 +56,10 @@ export default function ParentProgressPage() {
       {children.length > 1 && (
         <div className="flex gap-2">
           {children.map((c) => (
-            <a key={c.id} href={`/parent/progress?childId=${c.id}`}
+            <button key={c.id} onClick={() => setSelectedChildId(c.id)}
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focusable ${c.id === childId ? 'bg-accent text-white' : 'bg-bg border border-border text-muted hover:text-ink'}`}>
               {c.firstName}
-            </a>
+            </button>
           ))}
         </div>
       )}

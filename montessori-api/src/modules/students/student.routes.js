@@ -25,6 +25,12 @@ const photoUploader = createUploader('students/photos', ['jpg','jpeg','png','web
 
 const listQuerySchema = paginationSchema.extend({
   classroomId: z.string().uuid().optional(),
+  academicYearId: z.string().uuid().optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+  sortBy: z.enum(['lastName', 'firstName', 'age', 'studentNumber']).optional(),
+  sortDir: z.enum(['asc', 'desc']).optional(),
+  guardianName: z.string().optional(),
+  unenrolledOnly: z.string().optional(),
 });
 
 // All routes require authentication + tenant scope
@@ -53,6 +59,7 @@ router.get(
     try {
       const result = await studentService.listStudents({
         organizationId: req.organizationId,
+        user: req.user,
         ...req.query,
       });
       res.json(result);

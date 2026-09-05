@@ -1,15 +1,21 @@
 'use client';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { Users, GraduationCap, DollarSign, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react';
+import { Users, GraduationCap, DollarSign, AlertTriangle, TrendingUp, Sparkles, Building2, Calendar } from 'lucide-react';
 import { financeApi } from '../../../../lib/api/finance';
 import { studentsApi } from '../../../../lib/api/students';
 import { aiApi } from '../../../../lib/api/ai';
 import { attendanceApi } from '../../../../lib/api/attendance';
+import { classroomsApi } from '../../../../lib/api/classrooms';
 import { SkeletonStatCard, SkeletonCard } from '../../../../components/shared/Skeleton';
 import Link from 'next/link';
 import { useSyncManager } from '../../../../lib/hooks/useSyncManager';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Line, Bar } from 'react-chartjs-2';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, Title, Tooltip, Legend, Filler);
 
 function StatCard({ label, value, sub, icon: Icon, color, href }) {
   const inner = (
@@ -59,20 +65,37 @@ export default function AdminDashboard() {
   const { user } = useSelector((s) => s.auth);
   useSyncManager();
 
+  
+  const globalAcademicYearId = useSelector((s) => s.ui.selectedAcademicYearId);
+
   const now = new Date();
 
+  // Fetch classrooms to extract branches and years
+  const { data: classroomsData } = useQuery({
+    queryKey: ['classrooms', 'lookup'],
+    queryFn: () => classroomsApi.list({}),
+  });
+
+  
+
+  const academicYears = useMemo(() => {
+    if (!classroomsData) return [];
+    return Array.from(new Map(classroomsData.map(c => [c.academicYear.id, c.academicYear])).values());
+  }, [classroomsData]);
+
+  // KPIs
   const { data: finance, isLoading: loadingFinance } = useQuery({
-    queryKey: ['finance', 'summary'],
-    queryFn: financeApi.getSummary,
+    queryKey: ['finance', 'summary',  globalAcademicYearId],
+    queryFn: () => financeApi.getSummary({  academicYearId: globalAcademicYearId }),
   });
 
   const { data: studentsData, isLoading: loadingStudents } = useQuery({
     queryKey: ['students', 'count'],
-    queryFn: () => studentsApi.list({ pageSize: 1 }),
+    queryFn: () => studentsApi.list({ pageSize: 1, }),
   });
 
   const { data: attendance, isLoading: loadingAttendance } = useQuery({
-    queryKey: ['attendance', 'analytics', now.getFullYear(), now.getMonth() + 1],
+    queryKey: ['attendance', 'analytics',  now.getFullYear(), now.getMonth() + 1],
     queryFn: () => attendanceApi.getAnalytics({ month: now.getMonth() + 1, year: now.getFullYear() }),
   });
 
@@ -81,22 +104,86 @@ export default function AdminDashboard() {
     queryFn: () => aiApi.listInsights({ pageSize: 4, unreadOnly: true }),
   });
 
+  // Analytics for charts
+  const { data: financeTrend } = useQuery({
+    queryKey: ['finance', 'analytics',  globalAcademicYearId],
+    queryFn: () => financeApi.getAnalytics({  academicYearId: globalAcademicYearId }),
+  });
+
+  const { data: attendanceTrend } = useQuery({
+    queryKey: ['attendance', 'trend',  globalAcademicYearId],
+    queryFn: () => attendanceApi.getTrend({  academicYearId: globalAcademicYearId }),
+  });
+
   const totalStudents = studentsData?.pagination?.total ?? '—';
   const presentRate   = attendance?.overall
     ? Math.round((attendance.overall.presentCount / Math.max(attendance.overall.totalRecords, 1)) * 100)
     : null;
 
+  // Chart configs
+  const financeChartData = {
+    labels: financeTrend?.map(d => d.month) || [],
+    datasets: [
+      {
+        label: 'Collected ($)',
+        data: financeTrend?.map(d => d.collected) || [],
+        backgroundColor: 'rgba(34, 197, 94, 0.5)',
+        borderColor: 'rgb(34, 197, 94)',
+        borderWidth: 1,
+      },
+      {
+        label: 'Expenses ($)',
+        data: financeTrend?.map(d => d.expenses) || [],
+        backgroundColor: 'rgba(239, 68, 68, 0.5)',
+        borderColor: 'rgb(239, 68, 68)',
+        borderWidth: 1,
+      }
+    ],
+  };
+
+  const attendanceChartData = {
+    labels: attendanceTrend?.map(d => d.month) || [],
+    datasets: [
+      {
+        label: 'Attendance Rate (%)',
+        data: attendanceTrend?.map(d => d.rate) || [],
+        fill: true,
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+        borderColor: 'rgb(99, 102, 241)',
+        tension: 0.4,
+      }
+    ],
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top' },
+    },
+  };
+
   return (
-    <div className="space-y-8">
-      {/* Greeting */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-ink">
-          Good {now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : 'evening'},{' '}
-          {user?.firstName}
-        </h1>
-        <p className="text-muted text-sm mt-0.5">
-          {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+    <div className="space-y-8 pb-10">
+      {/* Header & Global Filters */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl font-bold text-ink">
+            Good {now.getHours() < 12 ? 'morning' : now.getHours() < 17 ? 'afternoon' : 'evening'},{' '}
+            {user?.firstName}
+          </h1>
+          <p className="text-muted text-sm mt-1">
+            {now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} — Enterprise Overview
+          </p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          <div className="card py-1.5 px-3 flex items-center gap-2 border-primary/20 bg-primary/5">
+            <Building2 size={16} className="text-primary" />
+            
+          </div>
+
+        </div>
       </div>
 
       {/* KPI row */}
@@ -118,6 +205,22 @@ export default function AdminDashboard() {
           <StatCard label="Collected this month" value={finance ? `$${Number(finance.collectedThisMonth).toLocaleString()}` : '—'}
             icon={TrendingUp} color="bg-success/10 text-success" href="/admin/finance" />
         )}
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="card p-5 h-80 flex flex-col">
+          <h3 className="font-semibold text-ink mb-4">Revenue vs Expenses</h3>
+          <div className="flex-1 relative">
+            <Bar data={financeChartData} options={chartOptions} />
+          </div>
+        </div>
+        <div className="card p-5 h-80 flex flex-col">
+          <h3 className="font-semibold text-ink mb-4">Attendance Trends</h3>
+          <div className="flex-1 relative">
+            <Line data={attendanceChartData} options={{...chartOptions, scales: { y: { min: 0, max: 100 } }}} />
+          </div>
+        </div>
       </div>
 
       {/* AI insights */}

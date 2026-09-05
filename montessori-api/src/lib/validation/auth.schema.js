@@ -53,7 +53,6 @@ export const resetPasswordSchema = z.object({
 export const inviteUserSchema = z.object({
   email: z.string().email(),
   roleId: z.string().uuid(),
-  branchId: z.string().uuid().optional(),
   firstName: z.string().min(1).max(50).optional(),
   lastName: z.string().min(1).max(50).optional(),
 });

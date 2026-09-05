@@ -10,28 +10,31 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, GraduationCap, Calendar, DollarSign,
   Settings, ChevronRight, Bell, LogOut, Building2, BookOpen,
-  Package, Megaphone, Sparkles,
+  Package, Megaphone, Sparkles, Award, ClipboardCheck, MessageSquare,
 } from 'lucide-react';
 import { useSelector, useDispatch } from 'react-redux';
 import { clearAuth } from '../../store/authSlice';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '../../lib/hooks/useAuth';
 import NotificationBell from '../shared/NotificationBell';
 import SyncStatusIndicator from '../shared/SyncStatusIndicator';
 import AIChatWidget from '../shared/AIChatWidget';
+import GlobalAcademicYearSelector from '../shared/GlobalAcademicYearSelector';
 import useHasPermission from '../../lib/hooks/useHasPermission';
 
 const NAV_ITEMS = [
-  { href: '/admin/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/admin/students',     label: 'Students',     icon: GraduationCap,   perm: 'student:read' },
-  { href: '/admin/staff',        label: 'Staff',        icon: Users,           perm: 'hr:read' },
-  { href: '/admin/classrooms',   label: 'Classrooms',   icon: Building2,       perm: 'student:read' },
-  { href: '/admin/curriculum',   label: 'Curriculum',   icon: BookOpen,        perm: 'curriculum:read' },
-  { href: '/admin/calendar',     label: 'Calendar',     icon: Calendar },
-  { href: '/admin/finance',      label: 'Finance',      icon: DollarSign,      perm: 'finance:read' },
-  { href: '/admin/inventory',    label: 'Inventory',    icon: Package,         perm: 'inventory:read' },
-  { href: '/admin/communication',label: 'Comms',        icon: Megaphone,       perm: 'announcement:read' },
-  { href: '/admin/ai-insights',  label: 'AI Insights',  icon: Sparkles,        perm: 'ai:insights' },
-  { href: '/admin/settings',     label: 'Settings',     icon: Settings,        perm: 'admin:org' },
+  { href: '/admin/dashboard',     label: 'Dashboard',      icon: LayoutDashboard },
+  { href: '/admin/students',      label: 'Students',       icon: GraduationCap,   perm: 'student:read' },
+  { href: '/admin/classrooms',    label: 'Classrooms',     icon: Building2,       perm: 'student:read' },
+  { href: '/admin/attendance',    label: 'Attendance',     icon: ClipboardCheck,  perm: 'attendance:read' },
+  { href: '/admin/curriculum',    label: 'Curriculum',     icon: BookOpen,        perm: 'curriculum:read' },
+  { href: '/admin/finance',       label: 'Finance',        icon: DollarSign,      perm: 'finance:read' },
+  { href: '/admin/staff',         label: 'Staff & HR',     icon: Users,           perm: 'hr:read' },
+  { href: '/admin/inventory',     label: 'Inventory',      icon: Package,         perm: 'inventory:read' },
+  { href: '/admin/communication', label: 'Comms',          icon: Megaphone,       perm: 'announcement:read' },
+  { href: '/admin/messages',      label: 'Messages',       icon: MessageSquare,   perm: 'message:send' },
+  { href: '/admin/gamification',  label: 'Gamification',   icon: Award,           perm: 'gamification:read' },
+  { href: '/admin/ai-insights',   label: 'AI Insights',    icon: Sparkles,        perm: 'ai:insights' },
 ];
 
 export default function AdminShell({ children }) {
@@ -40,11 +43,9 @@ export default function AdminShell({ children }) {
   const dispatch = useDispatch();
   const router = useRouter();
   const { user } = useSelector((s) => s.auth);
+  const { logout } = useAuth();
 
-  const handleLogout = () => {
-    dispatch(clearAuth());
-    router.replace('/login');
-  };
+  const handleLogout = () => logout();
 
   return (
     <div className="flex h-screen overflow-hidden bg-bg">
@@ -106,6 +107,7 @@ export default function AdminShell({ children }) {
             {NAV_ITEMS.find((n) => pathname.startsWith(n.href))?.label ?? 'Dashboard'}
           </h1>
           <div className="flex items-center gap-3">
+            <GlobalAcademicYearSelector />
             <SyncStatusIndicator />
             <NotificationBell />
             <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary font-semibold text-sm">

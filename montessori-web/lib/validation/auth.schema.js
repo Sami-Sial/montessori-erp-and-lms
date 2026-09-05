@@ -7,7 +7,6 @@ import { z } from 'zod';
 export const registerOrgSchema = z.object({
   orgName:    z.string().min(2).max(100),
   orgSlug:    z.string().min(2).max(60).regex(/^[a-z0-9-]+$/, 'Lowercase letters, numbers and hyphens only'),
-  branchName: z.string().min(2).max(100),
   firstName:  z.string().min(1).max(50),
   lastName:   z.string().min(1).max(50),
   email:      z.string().email(),
@@ -37,7 +36,6 @@ export const changePasswordSchema = z.object({
 export const inviteUserSchema = z.object({
   email:     z.string().email(),
   roleId:    z.string().uuid(),
-  branchId:  z.string().uuid().optional(),
   firstName: z.string().min(1).max(50).optional(),
   lastName:  z.string().min(1).max(50).optional(),
 });
