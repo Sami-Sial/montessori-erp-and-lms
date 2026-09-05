@@ -14,16 +14,13 @@
  * Demo credentials (all passwords: Demo@1234):
  *  superadmin@platform.com  — SUPER_ADMIN
  *  principal@sunrise.edu    — ORG_ADMIN
- *  branchadmin@sunrise.edu  — BRANCH_ADMIN
  *  teacher@sunrise.edu      — TEACHER
- *  removedGuide@sunrise.edu        — REMOVED_GUIDE
  *  finance@sunrise.edu      — FINANCE_STAFF
  *  hr@sunrise.edu           — HR_STAFF
  *  frontdesk@sunrise.edu    — FRONT_DESK
  *  parent1@example.com      — PARENT (Robert Johnson, father of Alex)
  *  parent2@example.com      — PARENT (Emily Johnson, mother of Alex — 2nd guardian)
  *  parent3@example.com      — PARENT (Carlos Rivera, father of Sofia)
- *  student@sunrise.edu      — STUDENT (Alex Johnson)
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -149,10 +146,6 @@ async function main() {
       perms: ['student:read','attendance:read','observation:read','announcement:read','message:send','ai:chat','gamification:read'],
     },
     {
-      name: 'STUDENT', displayName: 'Student', isSystem: true,
-      perms: ['announcement:read','gamification:read'],
-    },
-    {
       name: 'FINANCE_STAFF', displayName: 'Finance Staff', isSystem: true,
       perms: ['finance:read','finance:write','student:read','report:export','announcement:read','hr:read','hr:write'],
     },
@@ -254,9 +247,6 @@ async function main() {
   const parent1User = await upsertUser({ email: 'parent1@example.com', firstName: 'Robert', lastName: 'Johnson' }, 'PARENT');
   const parent2User = await upsertUser({ email: 'parent2@example.com', firstName: 'Emily',  lastName: 'Johnson' }, 'PARENT');
   const parent3User = await upsertUser({ email: 'parent3@example.com', firstName: 'Carlos', lastName: 'Rivera'  }, 'PARENT');
-
-  // Student user (older student with own login)
-  const studentUser = await upsertUser({ email: 'student@sunrise.edu', firstName: 'Alex', lastName: 'Johnson' }, 'STUDENT');
 
   // ── 6. Academic Year ──────────────────────────────────────────────────────────
   console.log('  → Academic Year');
@@ -565,7 +555,7 @@ async function main() {
       data: {
         id: uuid(),
         organizationId: org.id,
-        userId: studentUser.id,
+        userId: null,
         studentNumber: 'STU-001',
         firstName: 'Alex',
         lastName: 'Johnson',
