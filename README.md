@@ -12,7 +12,6 @@ All passwords: `Demo@1234`
 |---|---|---|
 | `principal@sunrise.edu` | Principal / Org Admin | Full school management |
 | `teacher@sunrise.edu` | Teacher | Classroom, attendance, observations |
-| `guide@sunrise.edu` | Montessori Guide | Oak Room, curriculum |
 | `finance@sunrise.edu` | Finance Staff | Invoices, payments, expenses |
 | `hr@sunrise.edu` | HR Staff | Staff, payroll, leave |
 | `frontdesk@sunrise.edu` | Front Desk | Attendance marking only |
